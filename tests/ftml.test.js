@@ -6,6 +6,10 @@ const {
     resolveIncludeTarget,
     substituteVariables,
 } = require('../utils/ftmlIncludes');
+const {
+    isAllowedFtmlAssetUrl,
+    rewriteFtmlCss,
+} = require('../utils/ftmlAssetProxy');
 
 const sites = [
     { PARAM: 'scp', WIKIT_ID: 'scp-wiki' },
@@ -40,4 +44,20 @@ test('substitutes declared include variables only', () => {
         substituteVariables('Hello {$name}; {$missing}', { name: '<b>User</b>' }),
         'Hello <b>User</b>; {$missing}'
     );
+});
+
+test('only proxies approved Wikidot FTML assets', () => {
+    assert.equal(isAllowedFtmlAssetUrl('https://rule-wiki-sandbox.wikidot.com/local--theme/style.css'), true);
+    assert.equal(isAllowedFtmlAssetUrl('https://rule-wiki-sandbox.wdfiles.com/local--files/theme/font.woff2'), true);
+    assert.equal(isAllowedFtmlAssetUrl('https://evil.example/wikidot.com/style.css'), false);
+    assert.equal(isAllowedFtmlAssetUrl('file:///etc/passwd'), false);
+});
+
+test('rewrites nested FTML CSS resources through the restricted proxy', () => {
+    const css = rewriteFtmlCss(
+        '@import "/local--theme/base.css"; .x{background:url(../img/a.png)}',
+        'https://rule-wiki-sandbox.wikidot.com/local--theme/style.css'
+    );
+    assert.match(css, /\/api\/tools\/ftml-asset\?url=/);
+    assert.match(css, /rule-wiki-sandbox\.wikidot\.com/);
 });
