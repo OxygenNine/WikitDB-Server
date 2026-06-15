@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:ftml": "node scripts/test-ftml-runtime.mjs",
     "start": "next start",
     "lint": "next lint",
     "test": "node --test tests/*.test.js",

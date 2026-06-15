@@ -27,6 +27,7 @@ export default function Tools() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[
+                        { href: '/tools/ftml-editor', icon: 'fa-code', color: 'blue', title: 'FTML 编辑器', desc: '在线编辑 Wikidot 源码，使用 FTML WASM 实时解析并在安全沙箱中预览。' },
                         { href: '/tools/gacha', icon: 'fa-box-open', color: 'purple', title: '档案馆盲盒', desc: '消耗资产，在浩瀚的数据中随机抽取未知的页面标的进行投资。' },
                         { href: '/tools/author-stock', icon: 'fa-chart-line', color: 'green', title: '作者概念股', desc: '投资有潜力的创作者，股价走势与近期发文量、存活率深度挂钩。' },
                         { href: '/tools/bingo', icon: 'fa-ticket-simple', color: 'teal', title: '标签大乐透', desc: '消耗扫描凭证，命中特定标签即可赢取最高百倍赔率的奖金。' },

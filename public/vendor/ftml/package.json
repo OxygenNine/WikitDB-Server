@@ -1,0 +1,31 @@
+{
+  "name": "ftml",
+  "type": "module",
+  "collaborators": [
+    "Emmie Smith <emmie.maeda@gmail.com>"
+  ],
+  "description": "Foundation Text Markup Language - a library to render Wikidot text as HTML",
+  "version": "1.32.2",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scpwiki/ftml"
+  },
+  "files": [
+    "ftml_bg.wasm",
+    "ftml.js",
+    "ftml.d.ts"
+  ],
+  "main": "ftml.js",
+  "types": "ftml.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "wikidot",
+    "wikijump",
+    "ftml",
+    "parsing",
+    "html"
+  ]
+}
