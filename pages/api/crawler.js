@@ -3,6 +3,10 @@ const config = require('../../wikitdb.config.js');
 const { getGraphQLEndpoint } = require('../../utils/graphql');
 
 export default async function handler(req, res) {
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const { site } = req.query;
 
     if (!site) return res.status(400).json({ error: '缺少 site 参数' });
@@ -67,27 +71,31 @@ export default async function handler(req, res) {
                 processNodes(articlesData?.nodes);
 
                 const totalItems = articlesData?.pageInfo?.total || 0;
-                const totalPages = Math.ceil(totalItems / pageSize);
+                const totalPages = Math.min(Math.ceil(totalItems / pageSize), 100);
 
                 if (totalPages > 1) {
-                    const fetchPromises = [];
-                    for (let i = 2; i <= totalPages; i++) {
-                        fetchPromises.push(
-                            fetch(getGraphQLEndpoint(wikiConfig), {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: buildQuery(i),
-                                cache: 'no-store'
-                            }).then(res => res.json()).catch(() => null)
-                        );
-                    }
-
-                    const results = await Promise.all(fetchPromises);
-                    results.forEach(json => {
-                        if (json && json.data && json.data.articles) {
-                            processNodes(json.data.articles.nodes);
+                    const batchSize = 5;
+                    for (let start = 2; start <= totalPages; start += batchSize) {
+                        const fetchPromises = [];
+                        const end = Math.min(start + batchSize - 1, totalPages);
+                        for (let i = start; i <= end; i++) {
+                            fetchPromises.push(
+                                fetch(getGraphQLEndpoint(wikiConfig), {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: buildQuery(i),
+                                    cache: 'no-store'
+                                }).then(response => response.json()).catch(() => null)
+                            );
                         }
-                    });
+
+                        const results = await Promise.all(fetchPromises);
+                        results.forEach(json => {
+                            if (json && json.data && json.data.articles) {
+                                processNodes(json.data.articles.nodes);
+                            }
+                        });
+                    }
                 }
             }
         } catch (e) {}

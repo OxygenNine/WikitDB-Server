@@ -6,6 +6,10 @@ const { wikitLimiter } = require('../../utils/rateLimiter');
 import { withLogging } from '../../utils/logRequest';
 
 async function handler(req, res) {
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const { site = 'global' } = req.query;
 
     try {

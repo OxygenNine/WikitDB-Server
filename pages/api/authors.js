@@ -7,9 +7,13 @@ const { singleFlight } = require('../../utils/singleFlight');
 const { wikitLimiter } = require('../../utils/rateLimiter');
 
 async function handler(req, res) {
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const { name } = req.query;
 
-    if (!name) {
+    if (!name || typeof name !== 'string' || name.trim().length > 100) {
         return res.status(400).json({ error: '缺少有效的 name 参数' });
     }
 

@@ -3,14 +3,21 @@ const config = require('../../wikitdb.config.js');
 const { getGraphQLEndpoint } = require('../../utils/graphql');
 
 export default async function handler(req, res) {
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     const { site, page } = req.query;
 
-    if (!site || !page || page === 'undefined') {
+    if (!site || !page || typeof page !== 'string' || page === 'undefined' || page.length > 300) {
         return res.status(400).json({ error: '缺少有效的 site 或 page 参数' });
     }
 
     let rawPage = page.split('|')[0].split('#')[0].trim().toLowerCase();
     const pageName = rawPage.replace(/\/$/, '').split('/').pop();
+    if (!pageName || pageName.length > 200 || /[\u0000-\u001f\u007f]/.test(pageName)) {
+        return res.status(400).json({ error: 'Invalid page name' });
+    }
 
     const wikiConfig = config.SUPPORT_WIKI.find(w => w.PARAM === site);
     if (!wikiConfig) {
