@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "typecheck": "tsc --noEmit",
     "test:ftml": "node scripts/test-ftml-runtime.mjs",
     "start": "next start",
     "lint": "next lint",
@@ -35,7 +36,11 @@
     "tailwindcss": "^3.3.5"
   },
   "devDependencies": {
-    "prisma": "^6.9.0"
+    "@types/node": "^20.19.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "prisma": "^6.9.0",
+    "typescript": "^5.9.3"
   },
   "overrides": {
     "postcss": "^8.5.15",

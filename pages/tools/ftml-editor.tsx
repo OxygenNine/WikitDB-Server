@@ -1,7 +1,49 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { GetStaticProps } from 'next';
 const config = require('../../wikitdb.config.js');
+
+type PreviewDevice = 'desktop' | 'tablet' | 'mobile';
+
+type PreviewSite = {
+    name: string;
+    param: string;
+    wikiId: string;
+};
+
+type FtmlError = {
+    kind?: string;
+    rule?: string;
+    span?: [number, number];
+};
+
+type WorkerSuccess = {
+    id: number;
+    ok: true;
+    html?: string;
+    errors?: FtmlError[];
+    version?: string;
+};
+
+type WorkerFailure = {
+    id: number;
+    ok: false;
+    error?: string;
+};
+
+type WorkerResult = WorkerSuccess | WorkerFailure;
+
+type IncludeResponse = {
+    error?: string;
+    expandedSource?: string;
+    warnings?: string[];
+    includedPages?: string[];
+};
+
+type FtmlEditorProps = {
+    sites: PreviewSite[];
+};
 
 const STORAGE_KEY = 'wikitdb:ftml-editor:v1';
 const DEFAULT_SOURCE = `+ FTML 在线编辑器
@@ -20,27 +62,27 @@ const DEFAULT_SOURCE = `+ FTML 在线编辑器
 这里是折叠内容。
 [[/collapsible]]`;
 
-function formatError(error, index) {
+function formatError(error: FtmlError, index: number) {
     const kind = error?.kind || 'parse-error';
     const rule = error?.rule ? ` · ${error.rule}` : '';
     const span = Array.isArray(error?.span) ? ` · ${error.span[0]}-${error.span[1]}` : '';
     return `${index + 1}. ${kind}${rule}${span}`;
 }
 
-export default function FtmlEditor({ sites }) {
-    const workerRef = useRef(null);
-    const previewRef = useRef(null);
+export default function FtmlEditor({ sites }: FtmlEditorProps) {
+    const workerRef = useRef<Worker | null>(null);
+    const previewRef = useRef<HTMLIFrameElement | null>(null);
     const requestIdRef = useRef(0);
     const [source, setSource] = useState(DEFAULT_SOURCE);
     const [site, setSite] = useState(sites[0]?.param || '');
     const [expandIncludes, setExpandIncludes] = useState(false);
     const [renderedHtml, setRenderedHtml] = useState('');
-    const [errors, setErrors] = useState([]);
-    const [warnings, setWarnings] = useState([]);
-    const [includedPages, setIncludedPages] = useState([]);
+    const [errors, setErrors] = useState<FtmlError[]>([]);
+    const [warnings, setWarnings] = useState<string[]>([]);
+    const [includedPages, setIncludedPages] = useState<string[]>([]);
     const [status, setStatus] = useState('正在加载 FTML...');
     const [workerVersion, setWorkerVersion] = useState('');
-    const [device, setDevice] = useState('desktop');
+    const [device, setDevice] = useState<PreviewDevice>('desktop');
 
     useEffect(() => {
         const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -48,11 +90,11 @@ export default function FtmlEditor({ sites }) {
 
         const worker = new Worker('/ftml-worker.js', { type: 'module' });
         workerRef.current = worker;
-        worker.addEventListener('message', (event) => {
-            const result = event.data || {};
+        worker.addEventListener('message', (event: MessageEvent<WorkerResult>) => {
+            const result = event.data;
             if (result.id !== requestIdRef.current) return;
             if (!result.ok) {
-                setStatus(`渲染失败：${result.error}`);
+                setStatus(`渲染失败：${result.error || '未知错误'}`);
                 return;
             }
             setRenderedHtml(result.html || '');
@@ -84,13 +126,13 @@ export default function FtmlEditor({ sites }) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ source, site }),
                 });
-                const data = await response.json();
+                const data = await response.json() as IncludeResponse;
                 if (!response.ok) throw new Error(data.error || 'Include 展开失败');
-                input = data.expandedSource;
+                input = data.expandedSource || input;
                 setWarnings(data.warnings || []);
                 setIncludedPages(data.includedPages || []);
-            } catch (error) {
-                setStatus(error.message);
+            } catch (error: unknown) {
+                setStatus(error instanceof Error ? error.message : 'Include 展开失败');
                 return;
             }
         }
@@ -154,7 +196,7 @@ export default function FtmlEditor({ sites }) {
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            {['desktop', 'tablet', 'mobile'].map(value => (
+                            {(['desktop', 'tablet', 'mobile'] as const).map(value => (
                                 <button
                                     key={value}
                                     type="button"
@@ -253,7 +295,7 @@ export default function FtmlEditor({ sites }) {
     );
 }
 
-export function getStaticProps() {
+export const getStaticProps: GetStaticProps<FtmlEditorProps> = () => {
     const previewSites = [
         ...config.SUPPORT_WIKI,
         {
@@ -271,4 +313,4 @@ export function getStaticProps() {
             })),
         },
     };
-}
+};

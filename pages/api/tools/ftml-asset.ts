@@ -1,10 +1,11 @@
 import { getClientIp, ipRateLimit } from '../../../utils/security';
+import type { NextApiRequest, NextApiResponse } from 'next';
 const { isAllowedFtmlAssetUrl, rewriteFtmlCss } = require('../../../utils/ftmlAssetProxy');
 
 const MAX_RESPONSE_SIZE = 2 * 1024 * 1024;
 const MAX_REDIRECTS = 4;
 
-async function fetchAllowed(url) {
+async function fetchAllowed(url: string): Promise<Response> {
     let current = url;
     for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects += 1) {
         if (!isAllowedFtmlAssetUrl(current)) throw new Error('disallowed asset');
@@ -20,7 +21,7 @@ async function fetchAllowed(url) {
     throw new Error('too many redirects');
 }
 
-async function readLimited(response) {
+async function readLimited(response: Response): Promise<Buffer> {
     const declared = Number(response.headers.get('content-length'));
     if (declared > MAX_RESPONSE_SIZE) throw new Error('asset too large');
     const buffer = Buffer.from(await response.arrayBuffer());
@@ -28,7 +29,7 @@ async function readLimited(response) {
     return buffer;
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'GET') {
         res.setHeader('Allow', 'GET');
         return res.status(405).send('Method Not Allowed');

@@ -5,6 +5,7 @@
 
 # build output
 .next
+*.tsbuildinfo
 
 # env & secrets
 .env

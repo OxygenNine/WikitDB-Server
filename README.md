@@ -20,8 +20,19 @@ Production validation:
 
 ```text
 npm test
+npm run typecheck
 npm run build
 ```
+
+## TypeScript Migration
+
+The application supports gradual TypeScript adoption without changing the
+Pages Router or existing JavaScript routes. New or substantially modified
+modules should prefer `.ts` or `.tsx`; existing JavaScript can be migrated one
+area at a time.
+
+Reference repositories under `others/` are intentionally excluded from the
+application type check.
 
 ## Security Notes
 
