@@ -9,6 +9,13 @@ async function handler(req, res) {
     const user = req.user;
     const { target, amount, type } = req.body;
 
+    if (typeof target !== 'string' || !target.trim() || target.length > 200) {
+        return res.status(400).json({ error: '无效的交易目标' });
+    }
+    if (type !== undefined && !['BUY', 'SELL'].includes(type)) {
+        return res.status(400).json({ error: '无效的交易类型' });
+    }
+
     const safeAmount = validateNumberRange(amount, 1, 100000);
     if (safeAmount === null) return res.status(400).json({ error: '交易金额异常（范围 1-100000）' });
 
@@ -21,9 +28,9 @@ async function handler(req, res) {
                     userId: user.id,
                     type: type || 'BUY',
                     amount: safeAmount,
-                    target: target,
+                    target: target.trim(),
                     status: 'COMPLETED',
-                    description: `交易目标: ${target}`
+                    description: `交易目标: ${target.trim()}`
                 }
             });
 

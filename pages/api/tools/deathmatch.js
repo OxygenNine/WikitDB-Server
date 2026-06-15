@@ -11,6 +11,10 @@ async function handler(req, res) {
     const { betAmount, betSide } = req.body;
 
     try {
+        if (!['left', 'right'].includes(betSide)) {
+            return res.status(400).json({ error: '无效的下注方向' });
+        }
+
         const amount = validateNumberRange(betAmount, 1, 10000);
         if (amount === null) return res.status(400).json({ error: '下注金额无效（范围 1-10000）' });
         if (Number(user.balance || 0) < amount) return res.status(400).json({ error: '账户余额不足' });

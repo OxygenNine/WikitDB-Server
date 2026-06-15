@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma';
 import { withAuth } from '../../../utils/withAuth';
 import { settleWager } from '../../../utils/balance';
 const { DEFAULT_GQL_ENDPOINT } = require('../../../utils/graphql');
+const { hasDistinctAllowedStrings } = require('../../../utils/securityPolicy');
 
 async function getHandler(req, res) {
     try {
@@ -33,6 +34,10 @@ async function postHandler(req, res) {
         const allowedTags = config?.tags || ['原创', '翻译', '搞笑', '微恐', '设定中心', '人事档案'];
 
         // 校验标签必须在允许的标签池内
+        if (!hasDistinctAllowedStrings(selectedTags, 3, allowedTags)) {
+            return res.status(400).json({ error: '必须选择 3 个互不相同的有效标签' });
+        }
+
         const invalidTag = selectedTags.find(t => !allowedTags.includes(t));
         if (invalidTag) return res.status(400).json({ error: `无效的标签: ${invalidTag}` });
 

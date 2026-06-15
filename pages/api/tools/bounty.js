@@ -2,6 +2,7 @@ import prisma from '../../../lib/prisma';
 import { withAuth } from '../../../utils/withAuth';
 import { getAdminUser } from '../../../utils/adminAuth';
 const { DEFAULT_GQL_ENDPOINT } = require('../../../utils/graphql');
+const { isArticleOwnedBy } = require('../../../utils/securityPolicy');
 
 const generateBounties = (config) => {
     const tagPool = config?.tags?.length > 0 ? config.tags : ['原创', '精品', 'scp', 'tale', 'goi-format', '微恐', '搞笑', '科幻', 'keter', '安全'];
@@ -120,6 +121,9 @@ async function handler(req, res) {
             if (gqlData.errors || !gqlData.data?.article) return res.status(400).json({ error: '未找到此页面，请检查拼写' });
 
             const article = gqlData.data.article;
+            if (!isArticleOwnedBy(article.author, user.wikidotAccount)) {
+                return res.status(403).json({ error: '该页面不属于你绑定的 Wikidot 账号' });
+            }
             const hasAllTags = bounty.tags.every(t => (article.tags || []).includes(t));
             const meetsRating = (article.rating || 0) >= bounty.minRating;
 

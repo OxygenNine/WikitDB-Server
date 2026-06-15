@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma';
 import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 import { rateLimit, ipRateLimit, getClientIp } from '../../utils/security';
 import { withCsrf } from '../../utils/csrf';
 
@@ -39,7 +40,7 @@ async function handler(req, res) {
             }
         }
 
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const code = crypto.randomInt(100000, 1000000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
         await prisma.verificationCode.upsert({
