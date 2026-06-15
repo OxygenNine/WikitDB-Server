@@ -10,6 +10,7 @@ const {
 const sites = [
     { PARAM: 'scp', WIKIT_ID: 'scp-wiki' },
     { PARAM: 'brcn', WIKIT_ID: 'backrooms-wiki-cn' },
+    { PARAM: 'rule-sandbox', WIKIT_ID: 'rule-wiki-sandbox' },
 ];
 
 test('parses include variables without accepting malformed keys', () => {
@@ -25,6 +26,10 @@ test('only resolves configured include sites and safe page names', () => {
         page: 'component:box',
     });
     assert.equal(resolveIncludeTarget(':attacker:page', 'brcn', sites), null);
+    assert.deepEqual(resolveIncludeTarget(':rule-wiki-sandbox:component:theme', 'brcn', sites), {
+        site: 'rule-sandbox',
+        page: 'component:theme',
+    });
     assert.equal(resolveIncludeTarget('../admin', 'brcn', sites), null);
     assert.equal(isSafePageName('component:theme'), true);
     assert.equal(isSafePageName('https://attacker.example'), false);

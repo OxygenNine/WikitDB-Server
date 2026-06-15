@@ -13,6 +13,15 @@ const MAX_SOURCE_LENGTH = 300000;
 const MAX_EXPANDED_LENGTH = 500000;
 const MAX_DEPTH = 4;
 const MAX_INCLUDES = 12;
+const PREVIEW_SITES = [
+    ...config.SUPPORT_WIKI,
+    {
+        NAME: '规则怪谈档案馆沙盒',
+        URL: 'https://rule-wiki-sandbox.wikidot.com/',
+        PARAM: 'rule-sandbox',
+        WIKIT_ID: 'rule-wiki-sandbox',
+    },
+];
 
 async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -30,7 +39,7 @@ async function handler(req, res) {
     if (!source || source.length > MAX_SOURCE_LENGTH) {
         return res.status(400).json({ error: '源码为空或超过 300,000 字符限制' });
     }
-    if (!config.SUPPORT_WIKI.some(site => site.PARAM === selectedSite)) {
+    if (!PREVIEW_SITES.some(site => site.PARAM === selectedSite)) {
         return res.status(400).json({ error: '请选择受支持的站点' });
     }
 
@@ -64,7 +73,7 @@ async function handler(req, res) {
             const target = resolveIncludeTarget(
                 directive.page,
                 currentSite,
-                config.SUPPORT_WIKI
+                PREVIEW_SITES
             );
             if (!target) {
                 warnings.push(`已阻止不受支持的 Include：${directive.page || '(空)'}`);
@@ -79,7 +88,7 @@ async function handler(req, res) {
                 continue;
             }
 
-            const wikiConfig = config.SUPPORT_WIKI.find(site => site.PARAM === target.site);
+            const wikiConfig = PREVIEW_SITES.find(site => site.PARAM === target.site);
             includeCount += 1;
             visited.add(visitKey);
             try {

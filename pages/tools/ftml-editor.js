@@ -21,11 +21,14 @@ const DEFAULT_SOURCE = `+ FTML 在线编辑器
 [[/collapsible]]`;
 
 function createPreviewDocument(html) {
+    const nonce = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID().replace(/-/g, '')
+        : Math.random().toString(36).slice(2);
     return `<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: https://*.wikidot.com https://*.wdfiles.com; style-src 'unsafe-inline'; font-src data:; frame-src 'none'; media-src https://*.wikidot.com https://*.wdfiles.com; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; img-src data: https://*.wikidot.com https://*.wdfiles.com; style-src 'unsafe-inline' https://*.wikidot.com https://*.wdfiles.com; font-src data: https://*.wikidot.com https://*.wdfiles.com; frame-src 'none'; media-src https://*.wikidot.com https://*.wdfiles.com; form-action 'none'; base-uri 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body{margin:0;padding:28px;background:#fff;color:#1f2937;font:16px/1.7 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -33,8 +36,36 @@ a{color:#4f46e5}img{max-width:100%;height:auto}pre,code{font-family:ui-monospace
 pre{overflow:auto;padding:14px;border-radius:8px;background:#f3f4f6}blockquote{margin-left:0;padding-left:16px;border-left:4px solid #c7d2fe}
 table{border-collapse:collapse;max-width:100%}td,th{padding:6px 10px;border:1px solid #d1d5db}
 .notice{padding:12px 16px;border:1px solid #a5b4fc;border-radius:10px;background:#eef2ff}
+.blockquote{margin:1.25rem auto;padding:1.2rem 1.8rem;background:#f1f1f1;max-width:90%}
+.page-rate-widget-box{display:flex;justify-content:flex-end;align-items:center;gap:14px;margin:0 0 20px auto;padding:8px 12px;width:max-content;background:#eee;color:#111;font-size:14px}
+.page-rate-widget-box button{border:0;background:transparent;color:#111;font-size:20px;font-weight:700;padding:0;opacity:1}
+wj-tabs{display:block;margin:20px 0;border:1px solid #ddd}
+.wj-tabs-button-list{display:flex;background:#eee}
+.wj-tabs-button{display:block;flex:1;padding:12px 18px;text-align:center;cursor:pointer;border-bottom:3px solid transparent;font-weight:600}
+.wj-tabs-button[aria-selected="true"]{background:#f7f7f7;border-bottom-color:#222}
+.wj-tabs-button:focus-visible{outline:2px solid #4f46e5;outline-offset:-2px}
+.wj-tabs-panel-list{background:#fff}
+.wj-tabs-panel{padding:28px 22px}
+.wj-tabs-panel[hidden]{display:none}
 </style>
-</head><body>${html}</body></html>`;
+</head><body>${html}
+<script nonce="${nonce}">
+document.querySelectorAll('wj-tabs').forEach(function(tabs) {
+  var buttons = Array.from(tabs.querySelectorAll(':scope > .wj-tabs-button-list > .wj-tabs-button'));
+  var panels = Array.from(tabs.querySelectorAll(':scope > .wj-tabs-panel-list > .wj-tabs-panel'));
+  buttons.forEach(function(button, index) {
+    button.addEventListener('click', function() {
+      buttons.forEach(function(item, itemIndex) {
+        var selected = itemIndex === index;
+        item.setAttribute('aria-selected', selected ? 'true' : 'false');
+        item.setAttribute('tabindex', selected ? '0' : '-1');
+        if (panels[itemIndex]) panels[itemIndex].hidden = !selected;
+      });
+    });
+  });
+});
+</script>
+</body></html>`;
 }
 
 function formatError(error, index) {
@@ -216,7 +247,7 @@ export default function FtmlEditor({ sites }) {
                             <div className="flex-1 overflow-auto p-4 flex justify-center">
                                 <iframe
                                     title="FTML 安全预览"
-                                    sandbox=""
+                                    sandbox="allow-scripts"
                                     srcDoc={createPreviewDocument(renderedHtml)}
                                     style={{ width: previewWidth }}
                                     className="min-h-[580px] bg-white rounded-lg border-0 shadow-sm transition-[width] duration-200"
@@ -249,9 +280,17 @@ export default function FtmlEditor({ sites }) {
 }
 
 export function getStaticProps() {
+    const previewSites = [
+        ...config.SUPPORT_WIKI,
+        {
+            NAME: '规则怪谈档案馆沙盒',
+            PARAM: 'rule-sandbox',
+            WIKIT_ID: 'rule-wiki-sandbox',
+        },
+    ];
     return {
         props: {
-            sites: config.SUPPORT_WIKI.map(site => ({
+            sites: previewSites.map(site => ({
                 name: site.NAME,
                 param: site.PARAM,
                 wikiId: site.WIKIT_ID,

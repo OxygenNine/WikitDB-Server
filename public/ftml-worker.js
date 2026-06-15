@@ -47,8 +47,14 @@ function render(source, meta) {
         WikitextSettings.from_mode('draft', 'wikidot')
     );
 
+    const score = Number(meta?.score || 0);
+    const html = output.body().replace(
+        /<p>TODO: module Rate<\/p>/gi,
+        `<div class="page-rate-widget-box" aria-label="评分预览"><span>评分: <strong>${score}</strong></span><button type="button" disabled>+</button><button type="button" disabled>×</button></div>`
+    );
+
     return {
-        html: output.body(),
+        html,
         errors,
         version: version(),
     };
