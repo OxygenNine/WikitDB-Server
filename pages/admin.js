@@ -16,6 +16,7 @@ function KpiTile({ label, value }) {
 export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('overview');
     const [currentUser, setCurrentUser] = useState(null);
+    const [authChecked, setAuthChecked] = useState(false);
     const [users, setUsers] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -44,10 +45,11 @@ export default function AdminDashboard() {
     const [honeypotLogs, setHoneypotLogs] = useState([]);
     const [overviewStats, setOverviewStats] = useState(null);
     useEffect(() => {
-        fetch('/api/user/me', { credentials: 'include' })
+        fetch('/api/user', { credentials: 'include' })
             .then(r => r.ok ? r.json() : null)
             .then(u => { if (u) setCurrentUser(u); })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setAuthChecked(true));
     }, []);
 
     useEffect(() => {
@@ -69,9 +71,17 @@ export default function AdminDashboard() {
         });
     }, [currentUser]);
 
-    if (!currentUser) return (
+    if (!authChecked) return (
         <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
             <div className="text-neutral-400 text-sm">加载中...</div>
+        </div>
+    );
+    if (!currentUser) return (
+        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-center">
+                <div className="text-neutral-300 text-sm mb-3">请先登录后访问管理面板</div>
+                <a href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</a>
+            </div>
         </div>
     );
     if (!currentUser.isAdmin) return (
