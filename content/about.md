@@ -81,11 +81,11 @@ WikitDB 是一个 **面向 Wikidot 社区生态的非营利性同人项目**，�
 
 ## 技术栈一览
 
-- **前端框架**：Next.js Pages Router + React 19 + Tailwind CSS
+- **前端框架**：Next.js Pages Router + React 18 + Tailwind CSS
 - **后端存储**：PostgreSQL via Prisma ORM
 - **抓取与同步**：kakushi-w/wikit CLI，Wikit GraphQL API
 - **论坛渲染**：FTML (Wikidot 文本标记语言) WASM 内核
-- **安全与基础设施**：JWT (HS256)、bcrypt、CSRF Origin 校验、IP 双层限速、Nginx BroTLi/CDN 可选
+- **安全与基础设施**：JWT (HS256)、bcrypt、CSRF Origin 校验、IP 双层限速
 
 ---
 
@@ -93,10 +93,10 @@ WikitDB 是一个 **面向 Wikidot 社区生态的非营利性同人项目**，�
 
 - **Laimu_slime**：核心开发者
 - **lestday233**：WikitDB 原版架构奠基人
-- **bairan317**：WikitDB LOGO 设计师
+- **白然**：WikitDB LOGO 设计师
 - **Wikit Team / Unitreaty**：Wikit API 运维
 - 每一位为 Wikidot 社区贡献原创内容的创作者
 
 ---
 
-*WikitDB Since 2024 · WikitDB Team*
+*WikitDB Since 2026 · WikitDB Team*

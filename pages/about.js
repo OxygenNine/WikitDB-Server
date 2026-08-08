@@ -33,7 +33,7 @@ const About = ({ contentHtml }) => {
                     <div className="relative max-w-3xl mx-auto px-4 text-center">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800/80 border border-gray-700/80 text-gray-400 text-xs tracking-wide backdrop-blur-sm mb-6">
                             <i aria-hidden="true" className="fa-solid fa-circle-info mr-1 text-indigo-400"></i>
-                            Since {config.SITE_SINCE || '2024'}
+                            Since {config.SITE_SINCE || '2026'}
                         </div>
                         <h1
                             id="about-hero-title"

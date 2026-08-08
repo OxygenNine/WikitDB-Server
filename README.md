@@ -195,7 +195,7 @@ WikitDB-Server/
 
 - **Laimu_slime** — 核心开发者
 - **lestday233** — WikitDB 原版架构奠基人
-- **bairan317** — WikitDB LOGO 设计师
+- **白然** — WikitDB LOGO 设计师
 - **Wikit Team / Unitreaty** — Wikit API 运维
 - 每一位为 Wikidot 社区贡献原创内容的创作者
 
