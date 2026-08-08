@@ -23,7 +23,14 @@ export function signToken(payload) {
 
 export function verifyToken(req) {
     const cookies = parse(req.headers.cookie || '');
-    const token = cookies.auth_token;
+    let token = cookies.auth_token;
+    // 兜底：Authorization: Bearer <token>（HTTP 场景 secure cookie 被拒收时使用）
+    if (!token && req.headers.authorization) {
+        const h = req.headers.authorization;
+        if (typeof h === 'string' && h.startsWith('Bearer ')) {
+            token = h.substring(7).trim();
+        }
+    }
     if (!token) return null;
     try {
         return jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });

@@ -44,23 +44,57 @@ export default function AdminDashboard() {
     const [forumSyncResult, setForumSyncResult] = useState(null);
     const [honeypotLogs, setHoneypotLogs] = useState([]);
     const [overviewStats, setOverviewStats] = useState(null);
+    const authHeaders = () => {
+        const h = { 'Content-Type': 'application/json' };
+        if (typeof localStorage !== 'undefined') {
+            const t = localStorage.getItem('token');
+            if (t) h['Authorization'] = `Bearer ${t}`;
+        }
+        return h;
+    };
+
     useEffect(() => {
-        fetch('/api/user', { credentials: 'include' })
-            .then(r => r.ok ? r.json() : null)
-            .then(u => { if (u) setCurrentUser(u); })
-            .catch(() => {})
-            .finally(() => setAuthChecked(true));
+        const tryFetch = async () => {
+            const resp = await fetch('/api/user', { credentials: 'include', headers: authHeaders() }).catch(() => null);
+            if (resp && resp.ok) {
+                const me = await resp.json().catch(() => null);
+                if (me && me.username) {
+                    setCurrentUser(me);
+                    return;
+                }
+            }
+            // 若 localStorage 有用户名但接口未返回，则 fallback 查目标用户（不含 isAdmin → 无权限页）
+            if (typeof localStorage !== 'undefined') {
+                const lsUser = localStorage.getItem('username');
+                if (lsUser) {
+                    const qresp = await fetch(`/api/user?username=${encodeURIComponent(lsUser)}`, {
+                        credentials: 'include',
+                        headers: authHeaders()
+                    }).catch(() => null);
+                    if (qresp && qresp.ok) {
+                        const qme = await qresp.json().catch(() => null);
+                        if (qme && qme.username) {
+                            setCurrentUser(qme);
+                            return;
+                        }
+                    }
+                }
+            }
+        };
+
+        tryFetch().finally(() => setAuthChecked(true));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {
         if (!currentUser?.isAdmin) return;
         Promise.all([
-            fetch('/api/admin/users', { credentials: 'include' }).then(r => r.ok ? r.json() : { users: [] }),
-            fetch('/api/admin/logs?limit=50', { credentials: 'include' }).then(r => r.ok ? r.json() : { logs: [] }),
-            fetch('/api/admin/quarantine', { credentials: 'include' }).then(r => r.ok ? r.json() : { wikis: [], tags: [], authors: [] }),
-            fetch('/api/admin/access-logs?limit=100', { credentials: 'include' }).then(r => r.ok ? r.json() : { logs: [] }),
-            fetch('/api/admin/honeypot-logs?limit=200', { credentials: 'include' }).then(r => r.ok ? r.json() : { logs: [] }),
-            fetch('/api/admin/overview', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+            fetch('/api/admin/users', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { users: [] }),
+            fetch('/api/admin/logs?limit=50', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { logs: [] }),
+            fetch('/api/admin/quarantine', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { wikis: [], tags: [], authors: [] }),
+            fetch('/api/admin/access-logs?limit=100', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { logs: [] }),
+            fetch('/api/admin/honeypot-logs?limit=200', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { logs: [] }),
+            fetch('/api/admin/overview', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : null),
         ]).then(([uData, lData, qData, aData, hData, oData]) => {
             setUsers(uData.users || []);
             setLogs(lData.logs || []);
@@ -69,6 +103,7 @@ export default function AdminDashboard() {
             setHoneypotLogs(hData.logs || []);
             if (oData) setOverviewStats(oData);
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser]);
 
     if (!authChecked) return (
@@ -91,7 +126,11 @@ export default function AdminDashboard() {
     );
 
     const api = async (url, opts = {}) => {
-        const r = await fetch(url, { credentials: 'include', ...opts, headers: { 'Content-Type': 'application/json', ...opts.headers } });
+        const r = await fetch(url, {
+            credentials: 'include',
+            ...opts,
+            headers: { ...authHeaders(), ...(opts.headers || {}) }
+        });
         return r.ok ? r.json() : Promise.reject(await r.json().catch(() => ({})));
     };
 

@@ -59,7 +59,8 @@ async function handler(req, res) {
 
         res.status(200).json({
             message: '登录成功',
-            username: user.username
+            username: user.username,
+            token: token
         });
 
     } catch (error) {
