@@ -1,96 +1,112 @@
 import React from 'react';
 import Head from 'next/head';
+import fs from 'fs';
+import path from 'path';
 const config = require('../wikitdb.config.js');
+const { markdownLite } = require('../utils/markdownLite');
 
-const About = () => {
+const About = ({ contentHtml }) => {
+    const wikis = config.SUPPORT_WIKI || config.SUPPOST_WIKI || [];
+
     return (
         <>
             <Head>
                 <title>关于 - {config.SITE_NAME}</title>
+                <meta
+                    name="description"
+                    content={`WikitDB 是一个面向 Wikidot 社区的非营利同人项目，收录 ${wikis.length} 个站点，提供页面归档、作者追踪、虚拟股市、论坛同步等全方位服务。`}
+                />
+                <meta property="og:title" content={`关于 ${config.SITE_NAME}`} />
+                <meta
+                    property="og:description"
+                    content="连接创作与未来的纽带 — Wikidot 社区的数据归档站与工具箱"
+                />
             </Head>
 
-            <div className="py-12 max-w-5xl mx-auto px-4">
-                {/* Hero Section */}
-                <div className="text-center mb-16">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 mb-6 tracking-tight">
-                        关于 {config.SITE_NAME}
-                    </h1>
-                    <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
-                        一个致力于为 Wikidot 社区提供全方位、多维度的作者活跃度分析与虚拟金融体验的综合性平台。
-                    </p>
-                </div>
-
-                {/* Core Features Grid */}
-                <div className="grid md:grid-cols-3 gap-8 mb-20">
-                    <div className="bg-white dark:bg-gray-800/40 p-8 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6">
-                            <i className="fa-solid fa-bolt text-2xl"></i>
+            <div className="pb-20">
+                {/* Hero Banner */}
+                <section className="relative pt-28 pb-16 overflow-hidden" aria-labelledby="about-hero-title">
+                    <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+                        <div className="absolute top-0 left-1/3 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[110px]"></div>
+                        <div className="absolute bottom-0 right-1/3 w-[400px] h-[400px] bg-purple-600/8 rounded-full blur-[100px]"></div>
+                    </div>
+                    <div className="relative max-w-3xl mx-auto px-4 text-center">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800/80 border border-gray-700/80 text-gray-400 text-xs tracking-wide backdrop-blur-sm mb-6">
+                            <i aria-hidden="true" className="fa-solid fa-circle-info mr-1 text-indigo-400"></i>
+                            Since {config.SITE_SINCE || '2024'}
                         </div>
-                        <h3 className="text-xl font-bold mb-4 dark:text-white">实时同步</h3>
-                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                            基于强大的 Wikit GraphQL 接口，我们能实时追踪全站作者的发文、评分及互动数据，确保信息的时效性。
+                        <h1
+                            id="about-hero-title"
+                            className="text-4xl sm:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 mb-5 tracking-tight"
+                        >
+                            关于 {config.SITE_NAME}
+                        </h1>
+                        <p className="text-lg text-gray-400 leading-relaxed max-w-xl mx-auto">
+                            面向 Wikidot 社区生态的非营利同人项目。把散落在各个分站的页面、作者、评分、论坛数据串起来，让创作者与读者各取所需。
                         </p>
                     </div>
+                </section>
 
-                    <div className="bg-white dark:bg-gray-800/40 p-8 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center text-purple-600 dark:text-purple-400 mb-6">
-                            <i className="fa-solid fa-chart-line text-2xl"></i>
-                        </div>
-                        <h3 className="text-xl font-bold mb-4 dark:text-white">虚拟股市</h3>
-                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                            首创“作者概念股”模式，将创作产出转化为波动曲线。在充满博弈的虚拟市场中，挖掘那些被低估的潜力新星。
-                        </p>
-                    </div>
+                {/* MD 内容区 */}
+                <section
+                    aria-label="介绍正文"
+                    className="max-w-4xl mx-auto px-4 sm:px-6 article-prose"
+                >
+                    <div
+                        className="rounded-2xl bg-gray-900/30 border border-gray-700/40 p-6 sm:p-10 shadow-xl shadow-black/20"
+                        // markdownLite 输出已通过 sanitizeRichHtml 消毒
+                        dangerouslySetInnerHTML={{ __html: contentHtml }}
+                    />
+                </section>
 
-                    <div className="bg-white dark:bg-gray-800/40 p-8 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 rounded-xl flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6">
-                            <i className="fa-solid fa-shield-halved text-2xl"></i>
-                        </div>
-                        <h3 className="text-xl font-bold mb-4 dark:text-white">社区驱动</h3>
-                        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                            本站点为非营利性同人项目，所有功能均围绕 Wikidot 社区生态设计，旨在提升社区互动性与趣味性。
-                        </p>
-                    </div>
-                </div>
-
-                {/* Credits & Origin */}
-                <div className="relative group overflow-hidden rounded-3xl bg-indigo-600 p-12 text-white shadow-2xl">
-                    <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:bg-white/20 transition-all"></div>
-                    
-                    <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-                        <div className="max-w-xl">
-                            <h2 className="text-3xl font-bold mb-6 italic tracking-tight">“连接创作与未来的纽带”</h2>
-                            <div className="space-y-4 text-indigo-100 text-lg leading-relaxed">
-                                <p>
-                                    WikitDB 由 <span className="font-bold text-white border-b-2 border-indigo-400/50">Laimu_slime</span> 
-                                    精心打磨，在继承由 <span className="font-bold text-white border-b-2 border-indigo-400/50">lestday233</span> 
-                                    奠定的 WikitDB 经典设计精髓的基础上，进行了全面的底层重构与视觉升级。
-                                </p>
-                                <p>
-                                    WikitDB LOGO 由用户 <span className="font-bold text-white border-b-2 border-indigo-400/50">bairan317</span> 倾力制作。
-                                </p>
-                                <p>
-                                    核心动力源自 <span className="font-bold text-white uppercase tracking-wider">Wikit API</span> 的强力支撑。
-                                </p>
-                            </div>
-                        </div>
-                        <div className="shrink-0">
-                            <div className="w-24 h-24 bg-white/20 backdrop-blur-xl rounded-2xl flex items-center justify-center border border-white/30 rotate-3 group-hover:rotate-6 transition-transform">
-                                <i className="fa-solid fa-heart text-4xl text-white"></i>
+                {/* 底部 CTA */}
+                <section aria-label="行动召唤" className="max-w-4xl mx-auto px-4 pt-16">
+                    <div className="relative rounded-3xl overflow-hidden">
+                        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 to-indigo-900/90"></div>
+                        <div aria-hidden="true" className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgMGg2MHY2MEgweiIgZmlsbD0ibm9uZSIvPjxjaXJjbGUgY3g9IjMwIiBjeT0iMzAiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNSkiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IGZpbGw9InVybCgjZykiIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiLz48L3N2Zz4=')] opacity-60"></div>
+                        <div className="relative px-8 py-12 sm:px-14 text-center">
+                            <h3 className="text-2xl sm:text-3xl font-bold text-white">准备好开始探索了吗？</h3>
+                            <p className="text-indigo-100/70 mt-3 max-w-md mx-auto">
+                                打开检索页搜索页面，或注册账号解锁作者追踪与虚拟股市等个性化功能。
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+                                <a
+                                    href="/pages"
+                                    className="inline-flex items-center px-7 py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-gray-100 transition-all hover:-translate-y-0.5 shadow-lg"
+                                >
+                                    <i aria-hidden="true" className="fa-solid fa-magnifying-glass mr-2 text-sm"></i>
+                                    开始检索
+                                </a>
+                                <a
+                                    href="/register"
+                                    className="px-7 py-3 bg-white/10 text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur-sm"
+                                >
+                                    注册账号
+                                </a>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                {/* Footer Quote */}
-                <div className="mt-20 text-center">
-                    <p className="text-gray-500 dark:text-gray-500 font-medium tracking-widest uppercase text-xs">
-                        {config.SITE_NAME} · Since 2024
-                    </p>
-                </div>
+                </section>
             </div>
         </>
     );
 };
+
+export async function getStaticProps() {
+    const mdPath = path.join(process.cwd(), 'content', 'about.md');
+    let raw = '';
+    try {
+        raw = fs.readFileSync(mdPath, 'utf8');
+    } catch (err) {
+        raw = '# 关于\n\n介绍文件暂不可用，请稍后再试。';
+    }
+
+    // 运行时占位符替换：{WIKIS_COUNT} -> 实际数量
+    const wikis = config.SUPPORT_WIKI || config.SUPPOST_WIKI || [];
+    raw = raw.replace(/\{WIKIS_COUNT\}/g, String(wikis.length));
+
+    const contentHtml = markdownLite(raw);
+    return { props: { contentHtml } };
+}
 
 export default About;
