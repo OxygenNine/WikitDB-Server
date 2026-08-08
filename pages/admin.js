@@ -6,7 +6,7 @@ const forumSyncSites = config.SUPPORT_WIKI.filter(w => w.FORUM_SYNC);
 
 function KpiTile({ label, value }) {
     return (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-5 transition-all hover:shadow-md">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-5 transition-all hover:border-neutral-700 hover:shadow-md">
             <div className="text-xs font-medium text-neutral-400">{label}</div>
             <div className="mt-2 text-3xl font-bold text-neutral-100">{(value ?? 0).toLocaleString()}</div>
         </div>
@@ -63,7 +63,6 @@ export default function AdminDashboard() {
                     return;
                 }
             }
-            // 若 localStorage 有用户名但接口未返回，则 fallback 查目标用户（不含 isAdmin → 无权限页）
             if (typeof localStorage !== 'undefined') {
                 const lsUser = localStorage.getItem('username');
                 if (lsUser) {
@@ -107,21 +106,21 @@ export default function AdminDashboard() {
     }, [currentUser]);
 
     if (!authChecked) return (
-        <div className="min-h-[60vh] bg-neutral-950 flex items-center justify-center rounded-lg">
-                <div className="text-neutral-400 text-sm">加载中...</div>
-            </div>
+        <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="text-neutral-400 text-sm">加载中...</div>
+        </div>
     );
     if (!currentUser) return (
-        <div className="min-h-[60vh] bg-neutral-950 flex items-center justify-center rounded-lg">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-center">
-                <div className="text-neutral-300 text-sm mb-3">请先登录后访问管理面板</div>
+        <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-6 text-center shadow-sm">
+                <div className="text-neutral-400 text-sm mb-3">请先登录后访问管理面板</div>
                 <a href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</a>
             </div>
         </div>
     );
     if (!currentUser.isAdmin) return (
-        <div className="min-h-[60vh] bg-neutral-950 flex items-center justify-center rounded-lg">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-neutral-300 text-sm">无权限访问管理面板</div>
+        <div className="min-h-[60vh] flex items-center justify-center">
+            <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-6 text-neutral-300 text-sm shadow-sm">无权限访问管理面板</div>
         </div>
     );
 
@@ -232,18 +231,29 @@ export default function AdminDashboard() {
         { id: 'forum', label: '论坛同步' },
         { id: 'access', label: '访问日志' },
     ];
+
+    const inputCls = 'flex-1 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 placeholder-neutral-500 outline-none focus:ring-2 focus:ring-indigo-500';
+    const inputLgCls = 'rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-500 outline-none focus:ring-2 focus:ring-indigo-500';
+    const btnGhost = 'rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800';
+    const btnDanger = 'rounded-md border border-red-800 bg-neutral-900 px-3 py-1.5 text-sm text-red-400 hover:bg-red-950';
+    const btnPrimary = 'rounded-md bg-indigo-600 border border-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700';
+    const cardCls = 'rounded-lg border border-neutral-800 bg-neutral-900 p-5';
+    const tableTheadCls = 'bg-neutral-800';
+    const tableRowCls = 'divide-y divide-neutral-800 bg-neutral-900';
+    const hoverRowCls = 'hover:bg-neutral-800';
+
     return (
-        <>
-            <Head><title>管理面板 - WikitDB</title></Head>
-            <div className="min-h-[60vh] rounded-xl shadow-lg overflow-hidden bg-gray-50">
-                <div className="bg-neutral-900 text-neutral-100 rounded-xl p-6">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+            <div className="min-h-screen bg-neutral-950 py-8 px-4 sm:px-6 lg:px-8">
+                <Head><title>管理面板 - WikitDB</title></Head>
+                <div className="max-w-7xl mx-auto space-y-6">
                     <h1 className="text-2xl font-semibold text-neutral-100">管理中心</h1>
 
                     {/* Tab nav */}
-                    <nav className="flex flex-wrap gap-1 rounded-lg border border-neutral-800/70 bg-neutral-900/50 p-1">
+                    <nav className="flex flex-wrap gap-1 rounded-lg border border-neutral-800 bg-neutral-900 p-1">
                         {tabs.map(t => (
                             <button key={t.id} onClick={() => setActiveTab(t.id)}
-                                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'}`}>
+                                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${activeTab === t.id ? 'bg-indigo-600 text-white' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800'}`}>
                                 {t.label}
                             </button>
                         ))}
@@ -258,11 +268,11 @@ export default function AdminDashboard() {
                                 <KpiTile label="今日活跃" value={overviewStats?.dailyActive} />
                                 <KpiTile label="蜜罐捕获" value={honeypotLogs.length} />
                             </div>
-                            <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-5">
-                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-3">最近操作日志</div>
+                            <div className={cardCls}>
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-3">最近操作日志</div>
                                 <div className="space-y-2 max-h-64 overflow-y-auto">
                                     {logs.slice(0, 10).map((l, i) => (
-                                        <div key={i} className="flex items-center justify-between text-sm border-b border-neutral-800/50 pb-2 last:border-0">
+                                        <div key={i} className="flex items-center justify-between text-sm border-b border-neutral-800 pb-2 last:border-0">
                                             <span className="text-neutral-300">{l.action || l.type}</span>
                                             <span className="text-neutral-500 text-xs">{l.createdAt?.slice(0, 16).replace('T', ' ')}</span>
                                         </div>
@@ -277,16 +287,16 @@ export default function AdminDashboard() {
                     {activeTab === 'honeypot' && (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">蜜罐监控</div>
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">蜜罐监控</div>
                                 <div className="flex gap-2">
-                                    <button onClick={refreshHoneypot} className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800">刷新</button>
-                                    <button onClick={clearHoneypot} className="rounded-md border border-rose-800/50 px-3 py-1.5 text-sm text-rose-300 hover:bg-rose-900/30">清空</button>
+                                    <button onClick={refreshHoneypot} className={btnGhost}>刷新</button>
+                                    <button onClick={clearHoneypot} className={btnDanger}>清空</button>
                                 </div>
                             </div>
-                            <div className="rounded-lg border border-neutral-800/70 overflow-hidden">
+                            <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-neutral-800">
-                                        <thead className="bg-neutral-800/60">
+                                        <thead className={tableTheadCls}>
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">时间</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">IP</th>
@@ -295,9 +305,9 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">UA</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-800/50 bg-neutral-900/40">
+                                        <tbody className={tableRowCls}>
                                             {honeypotLogs.slice(0, 50).map((l, i) => (
-                                                <tr key={i} className="hover:bg-neutral-800/30">
+                                                <tr key={i} className={hoverRowCls}>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300 whitespace-nowrap">{l.createdAt?.slice(0, 16).replace('T', ' ')}</td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-200">{l.ip}</td>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300 max-w-[200px] truncate">{l.path}</td>
@@ -312,17 +322,18 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
+
                     {/* Members */}
                     {activeTab === 'members' && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
                                 <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索用户名..."
-                                    className="flex-1 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-500 outline-none focus:ring-2 focus:ring-neutral-600" />
+                                    className={inputLgCls} />
                             </div>
-                            <div className="rounded-lg border border-neutral-800/70 overflow-hidden">
+                            <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-neutral-800">
-                                        <thead className="bg-neutral-800/60">
+                                        <thead className={tableTheadCls}>
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">用户名</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">余额</th>
@@ -330,14 +341,14 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-400">操作</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-800/50 bg-neutral-900/40">
+                                        <tbody className={tableRowCls}>
                                             {filteredUsers.map(u => (
-                                                <tr key={u.username} className="hover:bg-neutral-800/30">
+                                                <tr key={u.username} className={hoverRowCls}>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-200">{u.username}</td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{u.balance?.toLocaleString()}</td>
-                                                    <td className="px-4 py-2.5 text-sm">{u.isAdmin ? <span className="rounded bg-amber-900/40 border border-amber-700/40 px-1.5 py-0.5 text-xs text-amber-300">管理员</span> : <span className="text-neutral-500">用户</span>}</td>
+                                                    <td className="px-4 py-2.5 text-sm">{u.isAdmin ? <span className="rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-xs text-amber-400">管理员</span> : <span className="text-neutral-500">用户</span>}</td>
                                                     <td className="px-4 py-2.5 text-right">
-                                                        <button onClick={() => { setInspectTarget(u.username); handleInspect(); }} className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-800">查看</button>
+                                                        <button onClick={() => { setInspectTarget(u.username); handleInspect(); }} className={btnGhost}>查看</button>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -345,31 +356,32 @@ export default function AdminDashboard() {
                                     </table>
                                 </div>
                             </div>
+
                             {/* Inspect & Adjust */}
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
-                                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">查询用户</div>
+                                <div className={cardCls + ' space-y-3'}>
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">查询用户</div>
                                     <div className="flex gap-2">
                                         <input value={inspectTarget} onChange={e => setInspectTarget(e.target.value)} placeholder="用户名"
-                                            className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
-                                        <button onClick={handleInspect} className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800">查询</button>
+                                            className={inputCls} />
+                                        <button onClick={handleInspect} className={btnGhost}>查询</button>
                                     </div>
                                     {inspectData && (
-                                        <pre className="rounded-md bg-neutral-800/60 p-3 text-xs text-neutral-300 overflow-auto max-h-48">{JSON.stringify(inspectData, null, 2)}</pre>
+                                        <pre className="rounded-md bg-neutral-800 border border-neutral-700 p-3 text-xs text-neutral-300 overflow-auto max-h-48">{JSON.stringify(inspectData, null, 2)}</pre>
                                     )}
                                 </div>
-                                <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
-                                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">调整余额</div>
+                                <div className={cardCls + ' space-y-3'}>
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">调整余额</div>
                                     <input value={inspectTarget} onChange={e => setInspectTarget(e.target.value)} placeholder="用户名"
-                                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
                                     <div className="flex gap-2">
                                         <input value={adjustAmount} onChange={e => setAdjustAmount(e.target.value)} placeholder="金额 (可为负)" type="number"
-                                            className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                            className={inputCls} />
                                         <input value={adjustNote} onChange={e => setAdjustNote(e.target.value)} placeholder="备注"
-                                            className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                            className={inputCls} />
                                     </div>
                                     <button onClick={() => handleAdjust(inspectTarget)} disabled={isAdjusting}
-                                        className="rounded-md bg-neutral-800 border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700 disabled:opacity-50">执行调整</button>
+                                        className={btnPrimary + ' disabled:opacity-50'}>执行调整</button>
                                 </div>
                             </div>
                         </div>
@@ -378,23 +390,23 @@ export default function AdminDashboard() {
                     {/* Quarantine */}
                     {activeTab === 'quarantine' && (
                         <div className="space-y-4">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">内容隔离区</div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">内容隔离区</div>
                             {['wikis', 'tags', 'authors'].map(type => (
-                                <div key={type} className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
+                                <div key={type} className={cardCls + ' space-y-3'}>
                                     <div className="text-sm font-medium text-neutral-200 capitalize">{type === 'wikis' ? 'Wiki 站点' : type === 'tags' ? '标签' : '作者'}</div>
                                     <div className="flex flex-wrap gap-2">
                                         {(quarantineData[type] || []).map(v => (
                                             <span key={v} className="inline-flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-300">
                                                 {v}
-                                                <button onClick={() => handleQuarantineRemove(type, v)} className="text-neutral-500 hover:text-rose-400 ml-1">&times;</button>
+                                                <button onClick={() => handleQuarantineRemove(type, v)} className="text-neutral-500 hover:text-red-400 ml-1">&times;</button>
                                             </span>
                                         ))}
                                         {(quarantineData[type] || []).length === 0 && <span className="text-xs text-neutral-500">空</span>}
                                     </div>
                                     <div className="flex gap-2">
                                         <input value={qInput[type] || ''} onChange={e => setQInput(p => ({ ...p, [type]: e.target.value }))} placeholder={`添加${type === 'wikis' ? '站点' : type === 'tags' ? '标签' : '作者'}...`}
-                                            className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
-                                        <button onClick={() => handleQuarantineAdd(type)} className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800">添加</button>
+                                            className={inputCls} />
+                                        <button onClick={() => handleQuarantineAdd(type)} className={btnGhost}>添加</button>
                                     </div>
                                 </div>
                             ))}
@@ -405,13 +417,13 @@ export default function AdminDashboard() {
                     {activeTab === 'logs' && (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">操作日志</div>
-                                <button onClick={refreshLogs} className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800">刷新</button>
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">操作日志</div>
+                                <button onClick={refreshLogs} className={btnGhost}>刷新</button>
                             </div>
-                            <div className="rounded-lg border border-neutral-800/70 overflow-hidden">
+                            <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-neutral-800">
-                                        <thead className="bg-neutral-800/60">
+                                        <thead className={tableTheadCls}>
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">时间</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">操作</th>
@@ -419,9 +431,9 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">详情</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-800/50 bg-neutral-900/40">
+                                        <tbody className={tableRowCls}>
                                             {logs.map((l, i) => (
-                                                <tr key={i} className="hover:bg-neutral-800/30">
+                                                <tr key={i} className={hoverRowCls}>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300 whitespace-nowrap">{l.createdAt?.slice(0, 16).replace('T', ' ')}</td>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-200">{l.action || l.type}</td>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300">{l.username || '-'}</td>
@@ -434,76 +446,77 @@ export default function AdminDashboard() {
                             </div>
                         </div>
                     )}
+
                     {/* Broadcast */}
                     {activeTab === 'broadcast' && (
-                        <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-5 space-y-4">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">全站广播</div>
+                        <div className={cardCls + ' space-y-4'}>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">全站广播</div>
                             <textarea value={broadcastMsg} onChange={e => setBroadcastMsg(e.target.value)} rows={3} placeholder="输入广播内容..."
-                                className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-500 outline-none resize-none focus:ring-2 focus:ring-neutral-600" />
-                            <button onClick={handleBroadcast} className="rounded-md bg-neutral-800 border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200 hover:bg-neutral-700">发送广播</button>
+                                className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-500 outline-none resize-none focus:ring-2 focus:ring-indigo-500" />
+                            <button onClick={handleBroadcast} className={btnPrimary}>发送广播</button>
                         </div>
                     )}
 
                     {/* Economy */}
                     {activeTab === 'economy' && (
                         <div className="space-y-4">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">宏观经济控制</div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">宏观经济控制</div>
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
+                                <div className={cardCls + ' space-y-3'}>
                                     <div className="text-sm font-medium text-neutral-200">空投</div>
                                     <input value={airdropAmount} onChange={e => setAirdropAmount(Number(e.target.value))} type="number"
-                                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
-                                    <button onClick={handleAirdrop} className="rounded-md bg-neutral-800 border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700">执行空投</button>
+                                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <button onClick={handleAirdrop} className={btnPrimary}>执行空投</button>
                                 </div>
-                                <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
+                                <div className={cardCls + ' space-y-3'}>
                                     <div className="text-sm font-medium text-neutral-200">税率 (%)</div>
                                     <input value={taxRate} onChange={e => setTaxRate(Number(e.target.value))} type="number"
-                                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
-                                    <button onClick={handleTax} className="rounded-md bg-neutral-800 border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700">设置税率</button>
+                                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <button onClick={handleTax} className={btnPrimary}>设置税率</button>
                                 </div>
-                                <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
+                                <div className={cardCls + ' space-y-3'}>
                                     <div className="text-sm font-medium text-neutral-200">Bingo 配置</div>
                                     <input value={bingoTagsInput} onChange={e => setBingoTagsInput(e.target.value)} placeholder="标签 (逗号分隔)"
-                                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
                                     <input value={bingoCostInput} onChange={e => setBingoCostInput(Number(e.target.value))} type="number" placeholder="费用"
-                                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
-                                    <button onClick={handleBingo} className="rounded-md bg-neutral-800 border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700">更新 Bingo</button>
+                                        className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
+                                    <button onClick={handleBingo} className={btnPrimary}>更新 Bingo</button>
                                 </div>
                             </div>
-                            <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-4 space-y-3">
+                            <div className={cardCls + ' space-y-3'}>
                                 <div className="text-sm font-medium text-neutral-200">赏金任务配置</div>
                                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                     <input value={bountyTagsInput} onChange={e => setBountyTagsInput(e.target.value)} placeholder="标签 (逗号分隔)"
-                                        className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                        className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
                                     <input value={bountyMinRating} onChange={e => setBountyMinRating(Number(e.target.value))} type="number" placeholder="最低评分"
-                                        className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                        className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
                                     <input value={bountyMaxRating} onChange={e => setBountyMaxRating(Number(e.target.value))} type="number" placeholder="最高评分"
-                                        className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                        className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
                                     <input value={bountyBaseReward} onChange={e => setBountyBaseReward(Number(e.target.value))} type="number" placeholder="基础奖励"
-                                        className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none" />
+                                        className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500" />
                                 </div>
-                                <button onClick={handleBounty} className="rounded-md bg-neutral-800 border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:bg-neutral-700">更新赏金</button>
+                                <button onClick={handleBounty} className={btnPrimary}>更新赏金</button>
                             </div>
                         </div>
                     )}
 
                     {/* Forum Sync */}
                     {activeTab === 'forum' && (
-                        <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-5 space-y-4">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">论坛同步</div>
+                        <div className={cardCls + ' space-y-4'}>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">论坛同步</div>
                             <div className="flex gap-3 items-center">
                                 <select value={forumSyncSite} onChange={e => setForumSyncSite(e.target.value)}
-                                    className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 outline-none">
+                                    className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500">
                                     <option value="all">全部站点</option>
                                     {forumSyncSites.map(s => <option key={s.SLUG} value={s.SLUG}>{s.NAME}</option>)}
                                 </select>
                                 <button onClick={handleForumSync} disabled={forumSyncing}
-                                    className="rounded-md bg-neutral-800 border border-neutral-700 px-4 py-1.5 text-sm font-medium text-neutral-200 hover:bg-neutral-700 disabled:opacity-50">
+                                    className={btnPrimary + ' disabled:opacity-50'}>
                                     {forumSyncing ? '同步中...' : '开始同步'}
                                 </button>
                             </div>
                             {forumSyncResult && (
-                                <pre className="rounded-md bg-neutral-800/60 border border-neutral-700/50 p-3 text-xs text-neutral-300 overflow-auto max-h-48">{JSON.stringify(forumSyncResult, null, 2)}</pre>
+                                <pre className="rounded-md bg-neutral-800 border border-neutral-700 p-3 text-xs text-neutral-300 overflow-auto max-h-48">{JSON.stringify(forumSyncResult, null, 2)}</pre>
                             )}
                         </div>
                     )}
@@ -512,15 +525,15 @@ export default function AdminDashboard() {
                     {activeTab === 'access' && (
                         <div className="space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">访问日志</div>
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">访问日志</div>
                                 <input value={accessLogFilter} onChange={e => setAccessLogFilter(e.target.value)} placeholder="过滤 IP / 路径..."
-                                    className="flex-1 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-100 placeholder-neutral-500 outline-none" />
-                                <button onClick={refreshAccessLogs} className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800">刷新</button>
+                                    className={inputCls} />
+                                <button onClick={refreshAccessLogs} className={btnGhost}>刷新</button>
                             </div>
-                            <div className="rounded-lg border border-neutral-800/70 overflow-hidden">
+                            <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-neutral-800">
-                                        <thead className="bg-neutral-800/60">
+                                        <thead className={tableTheadCls}>
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">时间</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">IP</th>
@@ -528,13 +541,13 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">状态</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-800/50 bg-neutral-900/40">
+                                        <tbody className={tableRowCls}>
                                             {filteredAccessLogs.slice(0, 100).map((l, i) => (
-                                                <tr key={i} className="hover:bg-neutral-800/30">
+                                                <tr key={i} className={hoverRowCls}>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300 whitespace-nowrap">{l.createdAt?.slice(0, 16).replace('T', ' ')}</td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-200">{l.ip}</td>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300 max-w-[250px] truncate">{l.path}</td>
-                                                    <td className="px-4 py-2.5 text-sm text-neutral-400">{l.status || '-'}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-500">{l.status || '-'}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -546,6 +559,6 @@ export default function AdminDashboard() {
                     )}
                 </div>
             </div>
-        </>
+        </div>
     );
 }
