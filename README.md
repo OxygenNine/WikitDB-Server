@@ -205,4 +205,4 @@ WikitDB-Server/
 
 ---
 
-*WikitDB Since 2024 · WikitDB Team · 连接创作与未来的纽带*
+*WikitDB Since 2026 · WikitDB Team · 连接创作与未来的纽带*
