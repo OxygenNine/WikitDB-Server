@@ -235,8 +235,8 @@ export default function AdminDashboard() {
     return (
         <>
             <Head><title>管理面板 - WikitDB</title></Head>
-            <div className="min-h-[60vh] bg-neutral-950 text-neutral-100 rounded-lg">
-                <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
+            <div className="min-h-[60vh] rounded-xl shadow-lg overflow-hidden bg-gray-50">
+                <div className="bg-neutral-900 text-neutral-100 rounded-xl p-6">
                     <h1 className="text-2xl font-semibold text-neutral-100">管理中心</h1>
 
                     {/* Tab nav */}
