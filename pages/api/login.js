@@ -4,6 +4,10 @@ import { signToken, serializeAuthCookie } from '../../utils/auth';
 import { rateLimit, ipRateLimit, getClientIp } from '../../utils/security';
 import { withCsrf } from '../../utils/csrf';
 
+// 固定 dummy bcrypt 哈希，用于用户不存在时抹平响应时序，防止用户名枚举攻击
+// 这是一个合法的 bcrypt($2a$10$) 哈希，对应明文 "dummy-password-not-used"
+const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
 async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: '只接受 POST 请求' });
@@ -28,6 +32,8 @@ async function handler(req, res) {
         });
 
         if (!user) {
+            // 安全修复：执行一次 dummy bcrypt 比较以抹平时序差异，防止通过响应时间枚举有效用户名
+            await bcrypt.compare(password, DUMMY_HASH);
             const limited = await rateLimit(`login:${username}`, 3, 5 * 60 * 1000);
             return res.status(limited ? 429 : 400).json({
                 error: limited ? '登录尝试过于频繁，请 5 分钟后再试' : '用户名或密码错误'

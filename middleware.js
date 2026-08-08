@@ -17,8 +17,11 @@ function cleanupStore() {
 
 export function middleware(request) {
     const trustProxy = process.env.TRUST_PROXY === 'true';
+    // IP 解析优先级：反代头（需 TRUST_PROXY）→ Next.js request.ip → 兜底 'unknown'
+    // 修复：直连场景下避免所有请求共享 'unknown' 桶导致单点 DoS
     const ip = (trustProxy && request.headers.get('x-forwarded-for')?.split(',')[0]?.trim())
         || (trustProxy && request.headers.get('x-real-ip'))
+        || request.ip
         || 'unknown';
 
     if (request.nextUrl.pathname.startsWith('/api/')) {
