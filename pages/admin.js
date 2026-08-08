@@ -105,23 +105,27 @@ export default function AdminDashboard() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser]);
 
-    if (!authChecked) return (
-        <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="text-neutral-400 text-sm">加载中...</div>
-        </div>
-    );
-    if (!currentUser) return (
-        <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-6 text-center shadow-sm">
-                <div className="text-neutral-400 text-sm mb-3">请先登录后访问管理面板</div>
-                <a href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</a>
+    const outerWrap = children => (
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+            <div className="min-h-screen bg-neutral-950 py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+                <div className="max-w-7xl mx-auto w-full flex items-center justify-center">
+                    {children}
+                </div>
             </div>
         </div>
     );
-    if (!currentUser.isAdmin) return (
-        <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="rounded-lg border border-neutral-700 bg-neutral-900 p-6 text-neutral-300 text-sm shadow-sm">无权限访问管理面板</div>
+
+    if (!authChecked) return outerWrap(
+        <div className="text-neutral-400 text-sm">加载中...</div>
+    );
+    if (!currentUser) return outerWrap(
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-center">
+            <div className="text-neutral-400 text-sm mb-3">请先登录后访问管理面板</div>
+            <a href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</a>
         </div>
+    );
+    if (!currentUser.isAdmin) return outerWrap(
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-neutral-300 text-sm">无权限访问管理面板</div>
     );
 
     const api = async (url, opts = {}) => {
