@@ -107,12 +107,12 @@ export default function AdminDashboard() {
     }, [currentUser]);
 
     if (!authChecked) return (
-        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-            <div className="text-neutral-400 text-sm">加载中...</div>
-        </div>
+        <div className="min-h-[60vh] bg-neutral-950 flex items-center justify-center rounded-lg">
+                <div className="text-neutral-400 text-sm">加载中...</div>
+            </div>
     );
     if (!currentUser) return (
-        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="min-h-[60vh] bg-neutral-950 flex items-center justify-center rounded-lg">
             <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-center">
                 <div className="text-neutral-300 text-sm mb-3">请先登录后访问管理面板</div>
                 <a href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</a>
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
         </div>
     );
     if (!currentUser.isAdmin) return (
-        <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="min-h-[60vh] bg-neutral-950 flex items-center justify-center rounded-lg">
             <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-neutral-300 text-sm">无权限访问管理面板</div>
         </div>
     );
@@ -235,8 +235,8 @@ export default function AdminDashboard() {
     return (
         <>
             <Head><title>管理面板 - WikitDB</title></Head>
-            <div className="min-h-screen bg-neutral-950 text-neutral-100">
-                <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+            <div className="min-h-[60vh] bg-neutral-950 text-neutral-100 rounded-lg">
+                <div className="mx-auto max-w-7xl px-4 py-8 space-y-6">
                     <h1 className="text-2xl font-semibold text-neutral-100">管理中心</h1>
 
                     {/* Tab nav */}
