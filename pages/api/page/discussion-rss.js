@@ -15,7 +15,7 @@ async function handler(req, res) {
     const siteConfig = config.SUPPORT_WIKI.find(s => s.PARAM === wiki);
     if (!siteConfig) return res.status(404).json({ error: '未找到该站点配置' });
 
-    const cacheKey = `page-rss:${wiki}:${page}`;
+    const cacheKey = `page-rss:v2:${wiki}:${page}`;
 
     // 1. 读缓存
     try {
