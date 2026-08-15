@@ -450,7 +450,7 @@ async function fetchAllSitePages(siteConfig) {
 
     const allNodes = [];
     let page = 1;
-    const PAGE_SIZE = 500;
+    const PAGE_SIZE = 100; // Wikit GraphQL 单页上限为 100
     while (true) {
         const res = await axios.post(endpoint, {
             query: `query { articles(wiki: "${actualWikiName}", page: ${page}, pageSize: ${PAGE_SIZE}) { nodes { title page rating } } }`
@@ -509,7 +509,15 @@ async function runAutoStaffDeletion() {
                 continue;
             }
 
-            const candidates = pages.filter((p) => (p.rating ?? 0) <= deleteScore);
+            // 筛选低分候选（按页面名去重，避免同一页面在不同分类重复）
+            const candidates = [];
+            const seenPages = new Set();
+            for (const p of pages) {
+                if ((p.rating ?? 0) <= deleteScore && !seenPages.has(p.page)) {
+                    seenPages.add(p.page);
+                    candidates.push(p);
+                }
+            }
             console.log(`[${site.PARAM}] 共 ${pages.length} 页，低分候选 ${candidates.length} 页`);
 
             if (!canWrite) {
