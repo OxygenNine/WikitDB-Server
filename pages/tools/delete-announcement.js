@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 const config = require('../../wikitdb.config.js');
@@ -17,6 +17,10 @@ const DeleteAnnouncement = () => {
     const [isCheckingDeleted, setIsCheckingDeleted] = useState(false);
 
     const [generatedCode, setGeneratedCode] = useState('');
+
+    // 勾选状态：记录被"框选"用于生成公告的页面 URL
+    const [selectedUrls, setSelectedUrls] = useState(new Set());
+    const selectAllRef = useRef(null);
 
     const formatValidDate = (dateVal) => {
         if (!dateVal || dateVal === '0' || dateVal === 0) return '未知时间';
@@ -43,6 +47,7 @@ const DeleteAnnouncement = () => {
         setPagesList([]);
         setGeneratedCode('');
         setDeletedPages([]);
+        setSelectedUrls(new Set());
 
         let isMounted = true;
         
@@ -103,6 +108,14 @@ const DeleteAnnouncement = () => {
         
         return () => { isMounted = false; };
     }, [selectedSite, wikis]);
+
+    // 表头"全选"复选框的半选（indeterminate）状态
+    useEffect(() => {
+        if (selectAllRef.current) {
+            const allSelected = pagesList.length > 0 && selectedUrls.size === pagesList.length;
+            selectAllRef.current.indeterminate = selectedUrls.size > 0 && !allSelected;
+        }
+    }, [selectedUrls, pagesList]);
 
     const fetchSourceCode = async (siteParam, pageName) => {
         const res = await fetch(`/api/source?site=${siteParam}&page=${encodeURIComponent(pageName)}`);
@@ -180,7 +193,15 @@ const DeleteAnnouncement = () => {
                 setBatchProgress({ current: i + 1, total: nodes.length });
             }
             
-            setPagesList(prev => [...prev, ...newPages]);
+            if (newPages.length > 0) {
+                setPagesList(prev => [...prev, ...newPages]);
+                // 新抓取的页面默认勾选，可手动取消
+                setSelectedUrls(prev => {
+                    const next = new Set(prev);
+                    newPages.forEach(p => next.add(p.originalUrl));
+                    return next;
+                });
+            }
         } catch (err) {
             alert(`标签抓取失败: ${err.message}`);
         } finally {
@@ -190,8 +211,47 @@ const DeleteAnnouncement = () => {
     };
 
     const removePage = (indexToRemove) => {
+        const removed = pagesList[indexToRemove];
         setPagesList(prev => prev.filter((_, index) => index !== indexToRemove));
+        // 同步清除该页面的勾选状态
+        if (removed) {
+            setSelectedUrls(prev => {
+                const next = new Set(prev);
+                next.delete(removed.originalUrl);
+                return next;
+            });
+        }
     };
+
+    const toggleSelect = (url) => {
+        setSelectedUrls(prev => {
+            const next = new Set(prev);
+            if (next.has(url)) next.delete(url);
+            else next.add(url);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (pagesList.length === 0) return;
+        setSelectedUrls(prev => {
+            if (prev.size === pagesList.length) return new Set();
+            return new Set(pagesList.map(p => p.originalUrl));
+        });
+    };
+
+    // isSelfDeleted=true 只勾选"自删页面"，false 只勾选"低分页面"
+    const selectByType = (isSelfDeleted) => {
+        setSelectedUrls(new Set(
+            pagesList
+                .filter(p => isSelfDeleted
+                    ? (p.title.startsWith('deleted:') || p.originalUrl.includes('/deleted:'))
+                    : !(p.title.startsWith('deleted:') || p.originalUrl.includes('/deleted:')))
+                .map(p => p.originalUrl)
+        ));
+    };
+
+    const clearSelection = () => setSelectedUrls(new Set());
 
     const generateCode = () => {
         if (pagesList.length === 0) {
@@ -199,10 +259,16 @@ const DeleteAnnouncement = () => {
             return;
         }
 
+        const selectedList = pagesList.filter(p => selectedUrls.has(p.originalUrl));
+        if (selectedList.length === 0) {
+            setGeneratedCode('请先勾选要生成公告的页面（可点击表格中的复选框，或在列表上方使用快捷按钮）。');
+            return;
+        }
+
         const selfDeletedPages = [];
         const lowScorePages = [];
 
-        pagesList.forEach(p => {
+        selectedList.forEach(p => {
             if (p.title.startsWith('deleted:') || p.originalUrl.includes('/deleted:')) {
                 selfDeletedPages.push(p);
             } else {
@@ -289,6 +355,12 @@ const DeleteAnnouncement = () => {
                                     onClick={() => {
                                         const newPages = deletedPages.filter(dp => !pagesList.find(p => p.originalUrl === dp.originalUrl));
                                         setPagesList(prev => [...prev, ...newPages]);
+                                        // 新加入的页面默认勾选
+                                        setSelectedUrls(prev => {
+                                            const next = new Set(prev);
+                                            newPages.forEach(p => next.add(p.originalUrl));
+                                            return next;
+                                        });
                                         setDeletedPages([]);
                                     }}
                                     className="px-4 py-2 bg-red-500/20 text-red-400 border border-red-500/50 rounded hover:bg-red-500/30 transition-colors text-sm font-medium flex items-center gap-2"
@@ -332,11 +404,59 @@ const DeleteAnnouncement = () => {
                     </form>
                 </div>
 
+                <div className="flex flex-wrap items-center gap-3 mb-4 bg-gray-800/50 px-4 py-3 rounded-xl border border-white/5">
+                    <span className="text-sm text-gray-300 flex items-center gap-2">
+                        <i className="fa-solid fa-square-check text-indigo-400"></i>
+                        已勾选 <span className="font-bold text-indigo-400">{selectedUrls.size}</span> / {pagesList.length} 个页面
+                        {selectedUrls.size > 0 && <span className="text-xs text-gray-500">（仅勾选的页面会生成公告）</span>}
+                    </span>
+                    <div className="flex-1"></div>
+                    <button
+                        onClick={toggleSelectAll}
+                        disabled={pagesList.length === 0}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-40 border-gray-600 text-gray-300 hover:bg-gray-700/50"
+                    >
+                        <i className="fa-solid fa-check-double mr-1"></i>
+                        {selectedUrls.size === pagesList.length && pagesList.length > 0 ? '取消全选' : '全选'}
+                    </button>
+                    <button
+                        onClick={() => selectByType(true)}
+                        disabled={pagesList.length === 0}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-40 border-red-500/40 text-red-400 hover:bg-red-500/10"
+                    >
+                        <i className="fa-solid fa-user-slash mr-1"></i> 仅选自删
+                    </button>
+                    <button
+                        onClick={() => selectByType(false)}
+                        disabled={pagesList.length === 0}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-40 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                    >
+                        <i className="fa-solid fa-arrow-trend-down mr-1"></i> 仅选低分
+                    </button>
+                    <button
+                        onClick={clearSelection}
+                        disabled={selectedUrls.size === 0}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors disabled:opacity-40 border-gray-600 text-gray-300 hover:bg-gray-700/50"
+                    >
+                        <i className="fa-solid fa-eraser mr-1"></i> 清空
+                    </button>
+                </div>
+
                 <div className="bg-gray-800/30 rounded-xl border border-white/5 overflow-hidden mb-8">
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-700/50">
                             <thead className="bg-gray-900/40">
                                 <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase w-10">
+                                        <input
+                                            ref={selectAllRef}
+                                            type="checkbox"
+                                            checked={pagesList.length > 0 && selectedUrls.size === pagesList.length}
+                                            onChange={toggleSelectAll}
+                                            title="全选 / 取消全选"
+                                            className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                        />
+                                    </th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase">页面标题</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase w-32">原作者</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase w-24">当前评分</th>
@@ -347,7 +467,16 @@ const DeleteAnnouncement = () => {
                             <tbody className="divide-y divide-gray-700/30">
                                 {pagesList.length > 0 ? (
                                     pagesList.map((page, index) => (
-                                        <tr key={index} className="hover:bg-gray-800/40 transition-colors">
+                                        <tr key={index} className={`hover:bg-gray-800/40 transition-colors ${selectedUrls.has(page.originalUrl) ? 'bg-indigo-900/10' : ''}`}>
+                                            <td className="px-6 py-4 whitespace-nowrap w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedUrls.has(page.originalUrl)}
+                                                    onChange={() => toggleSelect(page.originalUrl)}
+                                                    title="勾选/取消勾选以决定是否生成公告"
+                                                    className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                />
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <a href={page.originalUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-400 hover:text-indigo-300 font-medium truncate max-w-xs block">
                                                     {page.title}
@@ -378,7 +507,7 @@ const DeleteAnnouncement = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">
+                                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                                             <div className="flex flex-col items-center">
                                                 <i className="fa-solid fa-inbox text-4xl mb-3 opacity-50"></i>
                                                 列表为空，请在上方添加页面
@@ -399,7 +528,7 @@ const DeleteAnnouncement = () => {
                             className="px-4 py-1.5 bg-green-600/20 text-green-400 border border-green-500/30 rounded hover:bg-green-600/30 transition-colors text-sm font-medium"
                         >
                             <i className="fa-solid fa-code mr-1.5"></i>
-                            生成公告代码
+                            生成公告代码{selectedUrls.size > 0 ? ` (${selectedUrls.size})` : ''}
                         </button>
                     </div>
                     <pre
@@ -408,7 +537,7 @@ const DeleteAnnouncement = () => {
                     >
                         {generatedCode || '点击右上角按钮生成代码...'}
                     </pre>
-                    {generatedCode && !generatedCode.includes('请先添加') && (
+                    {generatedCode && !generatedCode.includes('请先') && (
                         <div className="mt-4 flex justify-end">
                             <button 
                                 onClick={copyToClipboard}
