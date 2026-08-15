@@ -335,12 +335,48 @@ const DeleteAnnouncement = () => {
         setGeneratedCode(code.trim());
     };
 
-    const copyToClipboard = () => {
+    // 复制文本到剪贴板，兼容非 HTTPS 环境（navigator.clipboard 仅在安全上下文中可用）
+    const copyText = (text) => {
+        // 方式一：现代异步剪贴板 API（HTTPS 或 localhost 下优先使用）
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text).then(() => true);
+        }
+        // 方式二：降级方案，使用 execCommand 兼容普通 HTTP 环境
+        return new Promise((resolve, reject) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-9999px';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, textarea.value.length); // iOS Safari 需要
+            let ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (e) {
+                ok = false;
+            }
+            document.body.removeChild(textarea);
+            if (ok) resolve(true);
+            else reject(new Error('execCommand copy failed'));
+        });
+    };
+
+    const copyToClipboard = async () => {
         const container = document.getElementById('generated-code-container');
-        if (container) {
-            navigator.clipboard.writeText(container.innerText).then(() => {
-                alert('代码已复制到剪贴板！');
-            });
+        const text = (container ? (container.textContent || container.innerText) : '') || generatedCode;
+        if (!text) {
+            alert('没有可复制的代码，请先生成公告代码。');
+            return;
+        }
+        try {
+            await copyText(text);
+            alert('代码已复制到剪贴板！');
+        } catch (err) {
+            console.error('复制到剪贴板失败:', err);
+            alert('复制失败，请手动选中代码后使用 Ctrl+C 复制。');
         }
     };
 
