@@ -23,6 +23,28 @@ const RSS_URL_FORMATS = [
     (baseUrl, threadId) => `${baseUrl}/feed/forum/t-${threadId}.xml`,
 ];
 
+// 计时器 iframe 域名白名单（仅允许渲染可信的计时器服务）
+const TIMER_IFRAME_DOMAINS = ['timer.backroomswiki.cn'];
+
+/**
+ * 从原始 HTML 中提取计时器 iframe 标签（仅白名单域名）
+ * @param {string} rawHtml
+ * @returns {string} 匹配的 iframe 完整标签，未匹配返回 ''
+ */
+function extractTimerIframe(rawHtml) {
+    if (!rawHtml) return '';
+    const $ = cheerio.load(rawHtml);
+    let found = '';
+    $('iframe').each((_, el) => {
+        const src = $(el).attr('src') || '';
+        if (TIMER_IFRAME_DOMAINS.some(domain => src.includes(domain))) {
+            found = $.html(el);
+            return false; // 只取第一个匹配的计时器
+        }
+    });
+    return found;
+}
+
 /**
  * 从页面 HTML 中提取讨论区 id（threadId）
  * 定位策略：优先 option 栏中的 #discuss-button，其次 #page-options-bottom 内任何 forum/t- 链接
@@ -70,6 +92,7 @@ function parseForumRss(xml) {
         const authorNameMatch = itemHtml.match(/<wikidot:authorName>([\s\S]*?)<\/wikidot:authorName>/i);
         const authorUserIdMatch = itemHtml.match(/<wikidot:authorUserId>([\s\S]*?)<\/wikidot:authorUserId>/i);
         const contentMatch = itemHtml.match(/<content:encoded>[\s\S]*?<!\[CDATA\[([\s\S]*?)\]\]>[\s\S]*?<\/content:encoded>/i);
+        const rawContent = contentMatch ? contentMatch[1].trim() : '';
 
         items.push({
             postId: postIdMatch ? postIdMatch[1] : null,
@@ -78,12 +101,21 @@ function parseForumRss(xml) {
             link: text($el.find('link').first()) || '',
             authorName: authorNameMatch ? authorNameMatch[1].trim() : '',
             authorUserId: authorUserIdMatch ? authorUserIdMatch[1].trim() : null,
-            contentHtml: contentMatch
-                ? sanitizeRichHtml(contentMatch[1].trim())
-                : '',
+            contentHtml: sanitizeRichHtml(rawContent),
+            // 计时器 iframe（从原始内容提取，避免被 HTML 消毒移除）
+            timerIframe: extractTimerIframe(rawContent),
             pubDate: text($el.find('pubDate').first()),
         });
     });
+
+    // 汇总所有条目中的计时器 iframe（取第一个）
+    let timerIframe = '';
+    for (const item of items) {
+        if (item.timerIframe) {
+            timerIframe = item.timerIframe;
+            break;
+        }
+    }
 
     return {
         channelTitle: text($channel.find('title').first()),
@@ -91,6 +123,7 @@ function parseForumRss(xml) {
         description: text($channel.find('description').first()),
         lastBuildDate: text($channel.find('lastBuildDate').first()),
         items: items.slice(0, RSS_MAX_ITEMS),
+        timerIframe,
     };
 }
 
@@ -158,7 +191,9 @@ async function fetchPageDiscussionRss(siteConfig, pageName) {
         threadUrl,
         rssUrl,
         rss: rssData,
+        // 从讨论区内容中提取的计时器 iframe（用于删除公告倒计时显示）
+        timerIframe: rssData ? rssData.timerIframe : '',
     };
 }
 
-module.exports = { extractDiscussionThreadId, parseForumRss, fetchPageDiscussionRss };
+module.exports = { extractDiscussionThreadId, parseForumRss, fetchPageDiscussionRss, extractTimerIframe };

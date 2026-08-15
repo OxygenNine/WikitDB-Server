@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const {
     extractDiscussionThreadId,
     parseForumRss,
+    extractTimerIframe,
 } = require('../utils/wikidotPageRss');
 
 const SAMPLE_PAGE_HTML = `
@@ -47,6 +48,24 @@ const SAMPLE_RSS = `<?xml version="1.0" encoding="UTF-8" ?>
       <pubDate>Wed, 15 Feb 2023 15:00:04 +0000</pubDate>
       <wikidot:authorUserId>8122538</wikidot:authorUserId>
       <content:encoded><![CDATA[ <p>匿名回复</p> ]]></content:encoded>
+    </item>
+  </channel>
+</rss>`;
+
+const SAMPLE_RSS_WITH_TIMER = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:wikidot="http://www.wikidot.com/rss-namespace">
+  <channel>
+    <title>回应于 "主页"</title>
+    <link>http://example.com/forum/t-12345/</link>
+    <lastBuildDate>Sat, 15 Aug 2026 04:18:33 +0000</lastBuildDate>
+    <item>
+      <guid>http://example.com/forum/t-12345#post-6439667</guid>
+      <title>删除公告</title>
+      <link>http://example.com/forum/t-12345/#post-6439667</link>
+      <pubDate>Sat, 24 Feb 2024 11:23:13 +0000</pubDate>
+      <wikidot:authorName>Laimu_slime</wikidot:authorName>
+      <wikidot:authorUserId>1</wikidot:authorUserId>
+      <content:encoded><![CDATA[ <p>删除公告：<iframe src="https://timer.backroomswiki.cn/timer/time=1786974943446.245/type=delete" style="width: 400px; height: 65px;"></iframe></p> ]]></content:encoded>
     </item>
   </channel>
 </rss>`;
@@ -97,3 +116,25 @@ test('handles items without author name', () => {
 test('rejects invalid RSS documents', () => {
     assert.throws(() => parseForumRss('<html><body>not rss</body></html>'));
 });
+
+test('extracts countdown timer iframe from RSS items', () => {
+    const parsed = parseForumRss(SAMPLE_RSS_WITH_TIMER);
+    assert.match(parsed.timerIframe, /<iframe/);
+    assert.match(parsed.timerIframe, /timer\.backroomswiki\.cn/);
+    assert.match(parsed.timerIframe, /type=delete/);
+    // item 级别也带 timerIframe
+    assert.equal(parsed.items[0].timerIframe, parsed.timerIframe);
+});
+
+test('returns empty timerIframe when RSS has no timer', () => {
+    const parsed = parseForumRss(SAMPLE_RSS);
+    assert.equal(parsed.timerIframe, '');
+});
+
+test('extractTimerIframe only accepts whitelisted domains', () => {
+    const trusted = '<iframe src="https://timer.backroomswiki.cn/timer/time=1/type=delete"></iframe>';
+    const untrusted = '<iframe src="https://evil.example.com/timer"></iframe>';
+    assert.match(extractTimerIframe(trusted), /timer\.backroomswiki\.cn/);
+    assert.equal(extractTimerIframe(untrusted), '');
+});
+

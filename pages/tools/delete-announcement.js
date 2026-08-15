@@ -85,13 +85,15 @@ const DeleteAnnouncement = () => {
                             const displayTitle = titleStr.startsWith('deleted:') ? titleStr : `deleted:${titleStr}`;
                             
                             return {
+                                pageName: pageName,
                                 title: displayTitle,
                                 originalUrl: `${wikiConfig.URL.replace(/\/$/, '')}/${pageName}`,
                                 siteName: wikiConfig.NAME,
                                 creatorName: node.author || '未知',
                                 rating: node.rating || 0,
                                 lastUpdated: formatValidDate(node.created_at),
-                                sourceCode: '' 
+                                sourceCode: '',
+                                timerIframe: ''
                             };
                         });
                         setDeletedPages(formatted);
@@ -122,6 +124,29 @@ const DeleteAnnouncement = () => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || '源码抓取失败');
         return data.sourceCode;
+    };
+
+    // 并发抓取每个页面的讨论区 RSS，提取删除倒计时器 iframe
+    const updateTimers = async (pages, siteParam) => {
+        const CONCURRENCY = 4;
+        let cursor = 0;
+        const run = async () => {
+            while (cursor < pages.length) {
+                const idx = cursor++;
+                const p = pages[idx];
+                if (!p.pageName) continue;
+                try {
+                    const res = await fetch(`/api/page/discussion-rss?wiki=${siteParam}&page=${encodeURIComponent(p.pageName)}`);
+                    const data = await res.json();
+                    p.timerIframe = (data && data.timerIframe) || '';
+                } catch (e) {
+                    p.timerIframe = '';
+                }
+            }
+        };
+        const workers = [];
+        for (let i = 0; i < Math.min(CONCURRENCY, pages.length); i++) workers.push(run());
+        await Promise.all(workers);
     };
 
     const handleTagFetch = async (e) => {
@@ -169,13 +194,15 @@ const DeleteAnnouncement = () => {
                 
                 if (!pagesList.find(p => p.originalUrl === originalUrl)) {
                     let fullData = {
+                        pageName: node.page,
                         title: node.title || node.page,
                         originalUrl: originalUrl,
                         siteName: wikiConfig.NAME,
                         creatorName: node.author || '未知',
                         rating: node.rating || 0,
                         lastUpdated: formatValidDate(node.created_at),
-                        sourceCode: '[[源码获取失败，请手动补充]]'
+                        sourceCode: '[[源码获取失败，请手动补充]]',
+                        timerIframe: ''
                     };
                     
                     try {
@@ -194,6 +221,12 @@ const DeleteAnnouncement = () => {
             }
             
             if (newPages.length > 0) {
+                // 并发抓取删除倒计时器 iframe
+                try {
+                    await updateTimers(newPages, selectedSite);
+                } catch (err) {
+                    console.error('抓取计时器失败:', err);
+                }
                 setPagesList(prev => [...prev, ...newPages]);
                 // 新抓取的页面默认勾选，可手动取消
                 setSelectedUrls(prev => {
@@ -352,8 +385,14 @@ const DeleteAnnouncement = () => {
                                     ))}
                                 </div>
                                 <button 
-                                    onClick={() => {
+                                    onClick={async () => {
                                         const newPages = deletedPages.filter(dp => !pagesList.find(p => p.originalUrl === dp.originalUrl));
+                                        // 抓取删除倒计时器 iframe
+                                        try {
+                                            await updateTimers(newPages, selectedSite);
+                                        } catch (err) {
+                                            console.error('抓取计时器失败:', err);
+                                        }
                                         setPagesList(prev => [...prev, ...newPages]);
                                         // 新加入的页面默认勾选
                                         setSelectedUrls(prev => {
@@ -482,6 +521,12 @@ const DeleteAnnouncement = () => {
                                                     {page.title}
                                                 </a>
                                                 <div className="text-xs text-gray-500 mt-1">{page.siteName}</div>
+                                                {page.timerIframe && (
+                                                    <div
+                                                        className="mt-2"
+                                                        dangerouslySetInnerHTML={{ __html: page.timerIframe }}
+                                                    />
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                                                 {page.creatorName}
