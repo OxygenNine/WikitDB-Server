@@ -42,6 +42,12 @@ const WikidotDiscussion = ({ wiki, pageId }) => {
     const [anonContent, setAnonContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitMsg, setSubmitMsg] = useState('');
+    // RSS 更新相关状态
+    const [rssData, setRssData] = useState(null);
+    const [rssLoading, setRssLoading] = useState(false);
+    const [rssError, setRssError] = useState('');
+    const [showRss, setShowRss] = useState(true);
+
 
     useEffect(() => {
         if (!wiki || !pageId) return;
@@ -61,6 +67,27 @@ const WikidotDiscussion = ({ wiki, pageId }) => {
         };
 
         fetchDiscussion();
+    }, [wiki, pageId]);
+    // 抓取页面单页讨论的 RSS（页面 HTML → option 栏 → 讨论区 id → feed/forum/t-{id}.xml）
+    useEffect(() => {
+        if (!wiki || !pageId) return;
+
+        const fetchRss = async () => {
+            setRssLoading(true);
+            setRssError('');
+            try {
+                const res = await fetch(`/api/page/discussion-rss?wiki=${wiki}&page=${encodeURIComponent(pageId)}`);
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || 'RSS 获取失败');
+                setRssData(json);
+            } catch (err) {
+                setRssError(err.message);
+            } finally {
+                setRssLoading(false);
+            }
+        };
+
+        fetchRss();
     }, [wiki, pageId]);
 
     const handleAnonSubmit = async () => {
@@ -146,6 +173,90 @@ const WikidotDiscussion = ({ wiki, pageId }) => {
                     ))}
                 </div>
             )}
+
+
+            {/* RSS 更新区块：页面单页讨论 RSS（option 栏讨论区 id → feed/forum/t-{id}.xml） */}
+            <div className="mb-6 bg-gray-900/30 rounded-xl border border-gray-700/40 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3">
+                    <button
+                        onClick={() => setShowRss(!showRss)}
+                        className="flex items-center gap-2 text-sm font-semibold text-gray-200 hover:text-white transition-colors"
+                    >
+                        <i className={`fa-solid fa-rss text-orange-400 ${showRss ? '' : 'opacity-60'}`}></i>
+                        RSS 更新
+                        {rssData && rssData.rss && rssData.rss.items.length > 0 && (
+                            <span className="text-xs bg-orange-900/40 text-orange-300 px-2 py-0.5 rounded-full border border-orange-700/40">
+                                {rssData.rss.items.length}
+                            </span>
+                        )}
+                        <i className={`fa-solid fa-chevron-${showRss ? 'up' : 'down'} text-xs text-gray-500 transition-transform`}></i>
+                    </button>
+                    <div className="flex items-center gap-3">
+                        {rssLoading && <span className="text-xs text-gray-500 animate-pulse">加载中...</span>}
+                        {rssData && rssData.rssUrl && (
+                            <a
+                                href={rssData.rssUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-orange-400 hover:text-orange-300 transition-colors"
+                                title={rssData.rssUrl}
+                            >
+                                订阅此讨论 <i className="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+                            </a>
+                        )}
+                    </div>
+                </div>
+
+                {showRss && (
+                    <div className="px-4 pb-4">
+                        {rssLoading && <div className="text-sm text-gray-500 animate-pulse py-4">正在加载 RSS 更新...</div>}
+
+                        {rssError && (
+                            <div className="text-sm text-red-400 py-3">{rssError}</div>
+                        )}
+
+                        {rssData && rssData.hasDiscussion === false && (
+                            <div className="text-sm text-gray-600 py-3">
+                                该页面在原站没有启用讨论区，无 RSS 可订阅。
+                            </div>
+                        )}
+
+                        {rssData && rssData.rss && rssData.rss.items.length === 0 && (
+                            <div className="text-sm text-gray-600 py-3">RSS 源暂无更新。</div>
+                        )}
+
+                        {rssData && rssData.rss && rssData.rss.items.length > 0 && (
+                            <div className="space-y-3">
+                                {rssData.rss.items.map(item => (
+                                    <div key={item.guid || item.postId} className="bg-gray-800/40 border border-gray-700/40 rounded-lg p-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-sm font-medium text-indigo-300 flex items-center gap-2">
+                                                <i className="fa-solid fa-user text-xs opacity-60"></i>
+                                                {item.authorName || '匿名'}
+                                            </span>
+                                            <span className="text-xs text-gray-500 whitespace-nowrap">{item.pubDate}</span>
+                                        </div>
+                                        <div
+                                            className="text-gray-300 text-sm mt-2 prose prose-invert max-w-none leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: item.contentHtml }}
+                                        ></div>
+                                        {item.link && (
+                                            <a
+                                                href={item.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-block mt-2 text-xs text-gray-500 hover:text-indigo-400 transition-colors"
+                                            >
+                                                查看原帖 <i className="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+                                            </a>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {data && data.threadId && (
                 <div className="bg-gray-900/50 p-5 rounded-xl border border-gray-700 mt-6">
