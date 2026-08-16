@@ -10,31 +10,76 @@ const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** 登录 Wikidot，返回带会话的 Cookie 字符串 */
+// 登录会话缓存：Wikidot session 有效期很长，复用可避免频繁登录触发限流
+const LOGIN_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 小时
+let loginCache = { username: '', cookie: '', expiresAt: 0 };
+
+/** 清除登录缓存（session 失效时调用，下次登录会重新获取） */
+function clearLoginCache() {
+    loginCache = { username: '', cookie: '', expiresAt: 0 };
+}
+
+/** 验证 session 是否真实有效（未登录/限流时 Wikidot 会返回无效 session） */
+async function verifySession(cookie, username) {
+    try {
+        const res = await axios.get('https://www.wikidot.com/', {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Cookie': cookie },
+            validateStatus: (s) => true,
+            timeout: 15000
+        });
+        return String(res.data).includes(username);
+    } catch (e) {
+        return false;
+    }
+}
+
+/** 登录 Wikidot，返回带会话的 Cookie 字符串（优先复用缓存，登录后验证 session 有效） */
 async function login(username, password) {
-    const payload = new URLSearchParams({
-        login: username,
-        password,
-        action: 'Login2Action',
-        event: 'login'
-    });
-    const res = await axios.post(LOGIN_URL, payload.toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'WikitDB-Bot/1.0' },
-        maxRedirects: 0,
-        validateStatus: (s) => s >= 200 && s < 400,
-        timeout: 20000
-    });
-    const cookies = res.headers['set-cookie'] || [];
-    let sessionId = '';
-    for (const c of cookies) {
-        const m = String(c).match(/WIKIDOT_SESSION_ID=([^;]+)/);
-        if (m) {
-            sessionId = m[1];
-            break;
+    const now = Date.now();
+    if (loginCache.username === username && loginCache.cookie && now < loginCache.expiresAt) {
+        return loginCache.cookie;
+    }
+
+    let lastErr = null;
+    // 失败重试（最多 3 次，规避限流/临时失败）
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            const payload = new URLSearchParams({
+                login: username,
+                password,
+                action: 'Login2Action',
+                event: 'login'
+            });
+            const res = await axios.post(LOGIN_URL, payload.toString(), {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+                maxRedirects: 0,
+                validateStatus: (s) => s >= 200 && s < 400,
+                timeout: 20000
+            });
+            const cookies = res.headers['set-cookie'] || [];
+            let sessionId = '';
+            for (const c of cookies) {
+                const m = String(c).match(/WIKIDOT_SESSION_ID=([^;]+)/);
+                if (m) {
+                    sessionId = m[1];
+                    break;
+                }
+            }
+            if (!sessionId) throw new Error('登录响应缺少会话');
+
+            const cookie = `WIKIDOT_SESSION_ID=${sessionId}; wikidot_token7=123456;`;
+            // 验证 session 真实有效（限流时返回的 session 无效）
+            const valid = await verifySession(cookie, username);
+            if (!valid) throw new Error('登录 session 未验证通过（可能被限流）');
+
+            loginCache = { username, cookie, expiresAt: now + LOGIN_CACHE_TTL_MS };
+            return cookie;
+        } catch (e) {
+            lastErr = e;
+            await sleep(5000 * attempt);
         }
     }
-    if (!sessionId) throw new Error('机器人账号登录失败：未能获取会话（请检查账号密码）');
-    return `WIKIDOT_SESSION_ID=${sessionId}; wikidot_token7=123456;`;
+    throw new Error(`机器人账号登录失败：${lastErr ? lastErr.message : '未知错误'}`);
 }
 
 function buildHeaders(cookie) {
@@ -194,6 +239,7 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
 
 module.exports = {
     login,
+    clearLoginCache,
     buildHeaders,
     extractToken,
     addTag,
