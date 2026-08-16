@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 const config = require('../../wikitdb.config.js');
@@ -11,6 +11,9 @@ const {
 
 const StaffPostDeletion = () => {
     const wikis = config.SUPPORT_WIKI || [];
+    // 登录保护：该工具要求登录后使用（后端 API 亦已用 withAuth 强制校验）
+    const [authChecked, setAuthChecked] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [site, setSite] = useState('');
     const [botUsername, setBotUsername] = useState('');
     const [botPassword, setBotPassword] = useState('');
@@ -23,6 +26,11 @@ const StaffPostDeletion = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [results, setResults] = useState(null);
+
+    useEffect(() => {
+        setIsLoggedIn(!!window.localStorage.getItem('username'));
+        setAuthChecked(true);
+    }, []);
 
     const timerBaseUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/timer/timer.html`
@@ -86,6 +94,40 @@ const StaffPostDeletion = () => {
             setLoading(false);
         }
     };
+
+    // 登录保护：未登录时只显示提示，不渲染操作界面
+    if (!authChecked) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <div className="text-gray-400 text-sm flex items-center gap-2">
+                    <i className="fa-solid fa-spinner fa-spin"></i> 正在检查登录状态...
+                </div>
+            </div>
+        );
+    }
+
+    if (!isLoggedIn) {
+        return (
+            <>
+                <Head>
+                    <title>删帖公示操作 - {config.SITE_NAME}</title>
+                </Head>
+                <div className="min-h-[60vh] flex items-center justify-center">
+                    <div className="text-center max-w-md mx-auto bg-gray-800/50 rounded-2xl border border-white/10 p-10">
+                        <i className="fa-solid fa-lock text-4xl text-gray-500 mb-4"></i>
+                        <h1 className="text-2xl font-bold text-white mb-2">需要登录</h1>
+                        <p className="text-gray-400 text-sm mb-6">
+                            「删帖公示操作」涉及自动添加标签与发布公告，需要登录 WikitDB 账户后才能使用。
+                        </p>
+                        <Link href="/login"
+                            className="inline-block px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+                            <i className="fa-solid fa-right-to-bracket mr-1.5"></i>前往登录
+                        </Link>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
