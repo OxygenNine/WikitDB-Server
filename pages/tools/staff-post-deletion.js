@@ -767,13 +767,18 @@ const StaffPostDeletion = () => {
                                     className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5" placeholder="如 rule-wiki" />
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-1">
-                                    手动会话 WIKIDOT_SESSION_ID
+                                <label className="block text-xs text-gray-400 mb-1">手动会话 WIKIDOT_SESSION_ID
                                     {botConfig.session_cookie ? <span className="text-green-400"> · 已配置</span> : <span className="text-amber-400"> · 未配置</span>}
                                 </label>
                                 <input type="text" value={botConfig.session_cookie || ''} onChange={(e) => setBotConfig({ ...botConfig, session_cookie: e.target.value })}
                                     className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5 font-mono"
                                     placeholder="浏览器登录后复制 WIKIDOT_SESSION_ID 的值" />
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">扫描间隔（分钟）</label>
+                                <input type="number" min="1" value={botConfig.scan_interval_minutes || 30} onChange={(e) => setBotConfig({ ...botConfig, scan_interval_minutes: parseInt(e.target.value, 10) || 30 })}
+                                    className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5" />
+                                <p className="text-xs text-gray-500 mt-1">Bot 每隔该时间自动扫描一轮</p>
                             </div>
                         </div>
                     ) : (

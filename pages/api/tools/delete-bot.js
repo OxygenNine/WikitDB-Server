@@ -8,7 +8,7 @@ const LOG_DIR = `${BOT_DIR}/logs`;
 const SERVICE = 'wikit-delete-bot';
 
 // config.yaml 可编辑的标量字段
-const SCALAR_KEYS = ['username', 'password', 'session_cookie', 'siteUnixName'];
+const SCALAR_KEYS = ['username', 'password', 'session_cookie', 'siteUnixName', 'scan_interval_minutes'];
 
 function readConfig() {
     if (!fs.existsSync(CONFIG_PATH)) return null;
@@ -37,10 +37,12 @@ function writeConfig(updates) {
     for (const [key, value] of Object.entries(updates || {})) {
         if (!SCALAR_KEYS.includes(key)) continue;
         const esc = String(value ?? '').replace(/"/g, '\\"');
+        // 数字字段（扫描间隔）不带引号，其余带引号
+        const newVal = key === 'scan_interval_minutes' ? esc : `"${esc}"`;
         if (text.includes(`${key}:`)) {
-            text = text.replace(new RegExp(`^(${key}:\\s*")[^"]*(")`, 'm'), `$1${esc}$2`);
+            text = text.replace(new RegExp(`^(${key}:\\s*)"?[^"\\n]*"?`, 'm'), `$1${newVal}`);
         } else {
-            text += `\n${key}: "${esc}"`;
+            text += `\n${key}: ${newVal}`;
         }
     }
     fs.writeFileSync(CONFIG_PATH, text);
