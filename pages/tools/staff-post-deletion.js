@@ -37,11 +37,15 @@ const StaffPostDeletion = () => {
     // 扫描配置（创建）
     const [scanInterval, setScanInterval] = useState(720); // 分钟，0 = 不自动扫描
     const [scanSites, setScanSites] = useState([]);        // 指定扫描站点（PARAM 数组）
+    const [botDeleteScore, setBotDeleteScore] = useState(-5);       // 删除线
+    const [botCountdownHours, setBotCountdownHours] = useState(72); // 倒计时小时数
     // 编辑状态
     const [editingBot, setEditingBot] = useState(null);
     const [editName, setEditName] = useState('');
     const [editInterval, setEditInterval] = useState(0);
     const [editSites, setEditSites] = useState([]);
+    const [editDeleteScore, setEditDeleteScore] = useState(-5);
+    const [editCountdownHours, setEditCountdownHours] = useState(72);
 
     // 扫描间隔可选项：值（分钟）
     const SCAN_INTERVAL_OPTIONS = [
@@ -143,7 +147,9 @@ const StaffPostDeletion = () => {
                     username: botNewUsername,
                     password: botNewPassword,
                     scanInterval,
-                    scanSites
+                    scanSites,
+                    deleteScore: botDeleteScore,
+                    countdownHours: botCountdownHours
                 })
             });
             const d = await res.json();
@@ -171,6 +177,8 @@ const StaffPostDeletion = () => {
         setEditName(bot.name || '');
         setEditInterval(bot.scanInterval || 0);
         setEditSites(Array.isArray(bot.scanSites) ? bot.scanSites : []);
+        setEditDeleteScore(bot.deleteScore ?? -5);
+        setEditCountdownHours(bot.countdownHours ?? 72);
     };
 
     const cancelEditBot = () => {
@@ -189,7 +197,7 @@ const StaffPostDeletion = () => {
             const res = await fetch('/api/tools/bot-accounts', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: editingBot.id, name: editName, scanInterval: editInterval, scanSites: editSites })
+                body: JSON.stringify({ id: editingBot.id, name: editName, scanInterval: editInterval, scanSites: editSites, deleteScore: editDeleteScore, countdownHours: editCountdownHours })
             });
             const d = await res.json();
             if (!res.ok) { setBotMsg(d.error || '保存失败'); return; }
@@ -365,6 +373,8 @@ const StaffPostDeletion = () => {
                                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                                         <span><i className="fa-solid fa-clock mr-1"></i>自动扫描：{intervalLabel(bot.scanInterval || 0)}</span>
                                         <span><i className="fa-solid fa-globe mr-1"></i>站点：{(Array.isArray(bot.scanSites) && bot.scanSites.length ? bot.scanSites.map(siteName).join('、') : '未指定')}</span>
+                                        <span><i className="fa-solid fa-scale-balanced mr-1"></i>删除线：{bot.deleteScore ?? -5}</span>
+                                        <span><i className="fa-solid fa-hourglass-half mr-1"></i>倒计时：{bot.countdownHours ?? 72} 小时</span>
                                         <span><i className="fa-solid fa-history mr-1"></i>上次扫描：{bot.lastScanAt ? formatBotDate(bot.lastScanAt) : '从未'}</span>
                                         <span><i className="fa-solid fa-calendar mr-1"></i>创建：{formatBotDate(bot.createdAt)}</span>
                                     </div>
@@ -413,6 +423,18 @@ const StaffPostDeletion = () => {
                                             {w.NAME}
                                         </label>
                                     ))}
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">删除线（分数阈值）</label>
+                                    <input type="number" value={editDeleteScore} onChange={(e) => setEditDeleteScore(parseInt(e.target.value, 10) || 0)}
+                                        className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">计时器倒计时时间（小时）</label>
+                                    <input type="number" min="1" value={editCountdownHours} onChange={(e) => setEditCountdownHours(parseInt(e.target.value, 10) || 72)}
+                                        className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5" />
                                 </div>
                             </div>
                             <div className="flex gap-2">
@@ -467,6 +489,23 @@ const StaffPostDeletion = () => {
                                     </label>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">删除线（分数阈值）</label>
+                            <input type="number" value={botDeleteScore} onChange={(e) => setBotDeleteScore(parseInt(e.target.value, 10) || 0)}
+                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
+                                placeholder="-5" />
+                            <p className="text-xs text-gray-500 mt-1">评分低于/等于该分数线的原创页面将自动处理</p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">计时器倒计时时间（小时）</label>
+                            <input type="number" min="1" value={botCountdownHours} onChange={(e) => setBotCountdownHours(parseInt(e.target.value, 10) || 72)}
+                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
+                                placeholder="72" />
+                            <p className="text-xs text-gray-500 mt-1">公告中的删除倒计时时长</p>
                         </div>
                     </div>
                     <button type="button" onClick={createBot} disabled={creatingBot}

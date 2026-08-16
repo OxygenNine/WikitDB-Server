@@ -630,7 +630,9 @@ async function runBotScheduledScans() {
                     continue;
                 }
                 await scanSiteForDeletion(siteConfig, cookie, {
-                    dedupPrefix: `auto-deletion:bot:${bot.id}`
+                    dedupPrefix: `auto-deletion:bot:${bot.id}`,
+                    deleteScore: bot.deleteScore,
+                    countdownHours: bot.countdownHours
                 });
             }
 

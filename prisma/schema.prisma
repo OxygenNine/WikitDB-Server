@@ -98,6 +98,8 @@ model BotAccount {
   createdBy   String    @db.VarChar(50)
   scanInterval Int? // 自动扫描间隔（分钟），null/0 = 不自动扫描
   scanSites   String?   @db.Text // JSON 数组，如 ["dfc","brcn"]
+  deleteScore Int? // 删除线（评分阈值），null = 使用默认 -5
+  countdownHours Int? // 计时器倒计时小时数，null = 使用默认 72
   lastScanAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

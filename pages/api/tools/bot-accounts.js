@@ -5,7 +5,7 @@ import { encryptPassword } from '../../../utils/botAccountCrypto';
 // 密码字段绝不回显
 const PUBLIC_SELECT = {
     id: true, name: true, username: true, createdBy: true,
-    scanInterval: true, scanSites: true, lastScanAt: true,
+    scanInterval: true, scanSites: true, deleteScore: true, countdownHours: true, lastScanAt: true,
     createdAt: true, updatedAt: true
 };
 
@@ -45,15 +45,17 @@ async function handler(req, res) {
         }
     }
 
-    // POST：创建机器人（支持扫描间隔与指定站点）
+    // POST：创建机器人（支持扫描间隔、指定站点、删除线、倒计时时间）
     if (req.method === 'POST') {
-        const { name, username, password, scanInterval, scanSites } = req.body || {};
+        const { name, username, password, scanInterval, scanSites, deleteScore, countdownHours } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ error: '请填写机器人名称' });
         if (!username || !String(username).trim()) return res.status(400).json({ error: '请填写机器人账号' });
         if (!password || String(password).length < 4) return res.status(400).json({ error: '密码过短' });
 
         const interval = parseInt(scanInterval, 10);
         const sites = parseSites(scanSites);
+        const score = parseInt(deleteScore, 10);
+        const hours = parseInt(countdownHours, 10);
 
         try {
             const bot = await prisma.botAccount.create({
@@ -63,7 +65,9 @@ async function handler(req, res) {
                     password: encryptPassword(password),
                     createdBy: req.user.username,
                     scanInterval: interval > 0 ? interval : null,
-                    scanSites: sites.length > 0 ? JSON.stringify(sites) : null
+                    scanSites: sites.length > 0 ? JSON.stringify(sites) : null,
+                    deleteScore: Number.isNaN(score) ? null : score,
+                    countdownHours: Number.isNaN(hours) || hours <= 0 ? null : hours
                 },
                 select: PUBLIC_SELECT
             });
@@ -74,9 +78,9 @@ async function handler(req, res) {
         }
     }
 
-    // PUT：编辑机器人（名称 / 扫描间隔 / 指定站点），仅创建者可编辑
+    // PUT：编辑机器人（名称 / 扫描间隔 / 指定站点 / 删除线 / 倒计时时间），仅创建者可编辑
     if (req.method === 'PUT') {
-        const { id, name, scanInterval, scanSites } = req.body || {};
+        const { id, name, scanInterval, scanSites, deleteScore, countdownHours } = req.body || {};
         const botId = parseInt(id, 10);
         if (!botId) return res.status(400).json({ error: '缺少机器人 ID' });
 
@@ -89,13 +93,17 @@ async function handler(req, res) {
 
             const interval = parseInt(scanInterval, 10);
             const sites = parseSites(scanSites);
+            const score = parseInt(deleteScore, 10);
+            const hours = parseInt(countdownHours, 10);
 
             const bot = await prisma.botAccount.update({
                 where: { id: botId },
                 data: {
                     ...(name && String(name).trim() ? { name: String(name).trim().slice(0, 50) } : {}),
                     scanInterval: interval > 0 ? interval : null,
-                    scanSites: sites.length > 0 ? JSON.stringify(sites) : null
+                    scanSites: sites.length > 0 ? JSON.stringify(sites) : null,
+                    deleteScore: Number.isNaN(score) ? null : score,
+                    countdownHours: Number.isNaN(hours) || hours <= 0 ? null : hours
                 },
                 select: PUBLIC_SELECT
             });
