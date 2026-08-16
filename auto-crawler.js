@@ -303,7 +303,13 @@ async function runCrawler() {
                         const key = `user_votes_${user.toLowerCase().replace(/_/g, '-').replace(/ /g, '-')}`;
                         const record = await prisma.setting.findUnique({ where: { key } });
                         let existingMap = new Map();
-                        if (record) JSON.parse(record.value).forEach(v => existingMap.set(`${v.wiki}:${v.page}`, v));
+                        if (record) {
+                            // lib/prisma.js 的 setting 扩展已自动解析 value 为对象，避免二次 JSON.parse
+                            const parsed = typeof record.value === 'string' ? JSON.parse(record.value) : record.value;
+                            if (Array.isArray(parsed)) {
+                                parsed.forEach(v => existingMap.set(`${v.wiki}:${v.page}`, v));
+                            }
+                        }
                         
                         newVotes.forEach(nv => {
                             const id = `${nv.wiki}:${nv.page}`;
