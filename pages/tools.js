@@ -40,7 +40,8 @@ export default function Tools() {
                         { href: '/tools/wikidot-register', icon: 'fa-user-plus', color: 'cyan', title: '代注册 Wikidot 账号', desc: '无需翻墙，代为提交 Wikidot 注册请求，只需填写邮箱并完成验证码。' },
                         { href: '/tools/save-page', icon: 'fa-file-export', color: 'indigo', title: '代发页面', desc: '通过 Wikit API 代为向目标站点发布或编辑 Wikidot 页面。' },
                         { href: '/tools/member-admin', icon: 'fa-users-gear', color: 'blue', title: '成员管理', desc: '在特定站点对指定成员采取封禁、移除等操作。' },
-                        { href: '/tools/delete-announcement', icon: 'fa-trash-can', color: 'red', title: '删帖公示', desc: '查看近期已被删除的页面记录与相关公示信息。' }
+                        { href: '/tools/delete-announcement', icon: 'fa-trash-can', color: 'red', title: '删帖公示', desc: '查看近期已被删除的页面记录与相关公示信息。' },
+                        { href: '/tools/staff-post-deletion', icon: 'fa-bullhorn', color: 'amber', title: '删帖公示操作', desc: '自动给页面添加「待删除」标签，并在讨论区发布带删除倒计时器的删帖公告。' }
                     ].map((tool) => (
                         <Link
                             key={tool.href}

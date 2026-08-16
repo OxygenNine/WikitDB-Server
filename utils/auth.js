@@ -39,6 +39,7 @@ export function verifyToken(req) {
     }
 }
 
-export function serializeAuthCookie(token) {
-    return serialize('auth_token', token, COOKIE_OPTIONS);
+export function serializeAuthCookie(token, options = {}) {
+    // options 可覆盖 secure：生产环境若站点为 HTTP，应传 secure: false，否则浏览器会拒绝 Secure cookie
+    return serialize('auth_token', token, { ...COOKIE_OPTIONS, ...options });
 }
