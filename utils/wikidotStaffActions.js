@@ -187,40 +187,57 @@ async function findDiscussion(baseUrl, pageName, cookie) {
 }
 
 /**
- * 在页面讨论区发布公告
- *  - 已有线程 threadId：发新回复到 /forum/t-{threadId}
- *  - 仅分类 categoryId：创建新主题到 /forum/c-{categoryId}
+ * 在页面讨论区发布删帖公告
+ *  - 已有线程 threadId：通过 ForumNewPostFormModule + ForumAction/savePost 发回复
+ *  - 仅分类 categoryId：创建新主题（ForumAction/saveThread）
  * @returns {Promise<{categoryId: string|null, threadId: string|null, target: string, httpStatus: number}>}
  */
 async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
     const { categoryId, threadId } = await findDiscussion(baseUrl, pageName, cookie);
+    const ajaxUrl = `${baseUrl}/ajax-module-connector.php`;
+    const token7 = extractToken7(cookie);
 
     let url = '';
     let label = '';
     let params = {};
 
     if (threadId) {
-        url = `${baseUrl}/forum/t-${threadId}`;
+        // 发新回复到已有线程
+        // 1. 加载发帖表单获取真实 token
+        try {
+            const formRes = await axios.post(ajaxUrl, new URLSearchParams({
+                moduleName: 'forum/sub/ForumNewPostFormModule',
+                threadId,
+                wikidot_token7: token7
+            }).toString(), {
+                headers: { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' },
+                timeout: 20000,
+                validateStatus: (s) => s >= 200 && s < 400
+            });
+            const formBody = typeof formRes.data === 'string' ? formRes.data : JSON.stringify(formRes.data || '');
+            const fm = String(formBody).match(/wikidot_token7[^>]*value="([^"]+)"/);
+            if (fm) params.wikidot_token7 = fm[1];
+        } catch (e) { /* 用默认 token */ }
+
+        params.action = 'ForumAction';
+        params.event = 'savePost';
+        params.threadId = threadId;
+        params.text = text;
+        if (!params.wikidot_token7) params.wikidot_token7 = token7;
+        url = ajaxUrl;
         label = `线程 t-${threadId}`;
-        params = { wikidot_token7: '123456', text };
     } else if (categoryId) {
-        url = `${baseUrl}/forum/c-${categoryId}`;
+        // 创建新主题
+        params.action = 'ForumAction';
+        params.event = 'saveThread';
+        params.categoryId = categoryId;
+        params.title = title;
+        params.text = text;
+        params.wikidot_token7 = token7;
+        url = ajaxUrl;
         label = `分类 c-${categoryId}`;
-        params = { wikidot_token7: '123456', title, text };
     } else {
         throw new Error('未找到页面讨论区（无法从页面解析 catId/threadId）');
-    }
-
-    try {
-        const getForum = await axios.get(url, {
-            headers: buildHeaders(cookie),
-            timeout: 20000,
-            maxRedirects: 5,
-            validateStatus: (s) => s >= 200 && s < 400
-        });
-        params.wikidot_token7 = extractToken(getForum.data);
-    } catch (e) {
-        /* token 提取失败则用默认值 */
     }
 
     const postRes = await axios.post(url, new URLSearchParams(params).toString(), {
@@ -229,12 +246,18 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
         maxRedirects: 5,
         validateStatus: (s) => s >= 200 && s < 400
     });
+
+    const data = postRes.data;
+    if (data && typeof data === 'object' && data.status && data.status !== 'ok') {
+        throw new Error(`发布公告失败: ${data.message || data.status}`);
+    }
     return { categoryId, threadId, target: label, httpStatus: postRes.status };
 }
 
 module.exports = {
     login,
     clearLoginCache,
+    verifySession,
     buildHeaders,
     extractToken,
     addTag,

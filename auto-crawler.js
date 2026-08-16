@@ -8,8 +8,8 @@ const config = require('./wikitdb.config.js');
 const { fetchCategories, fetchThreads, fetchPosts } = require('./utils/wikidotForum');
 const { getGraphQLEndpoint } = require('./utils/graphql');
 const { buildTimerIframe, buildAnnouncementText, buildAnnouncementTitle } = require('./utils/staffPostDeletion');
-const { login, addTag, postAnnouncement, buildHeaders } = require('./utils/wikidotStaffActions');
-const { decryptPassword } = require('./utils/botAccountCrypto');
+const { login, addTag, postAnnouncement, buildHeaders, verifySession } = require('./utils/wikidotStaffActions');
+const { decryptPassword, encryptData } = require('./utils/botAccountCrypto');
 
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 });
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 });
@@ -646,13 +646,30 @@ async function runBotScheduledScans() {
                 continue;
             }
 
-            // 用机器人账号登录
-            let cookie;
-            try {
-                cookie = await login(bot.username, decryptPassword(bot.password));
-            } catch (e) {
-                console.error(`机器人「${bot.name}」登录失败: ${e.message}`);
-                continue;
+            // 获取有效会话：优先复用持久化 session（避免频繁登录触发限流），否则登录并保存
+            let cookie = '';
+            if (bot.sessionCookie) {
+                try {
+                    const saved = decryptPassword(bot.sessionCookie);
+                    if (saved && await verifySession(saved, bot.username)) {
+                        cookie = saved;
+                        console.log(`[${new Date().toLocaleString()}] 机器人「${bot.name}」复用持久化会话`);
+                    }
+                } catch (e) { /* 会话无效则重新登录 */ }
+            }
+            if (!cookie) {
+                try {
+                    cookie = await login(bot.username, decryptPassword(bot.password));
+                    try {
+                        await prisma.botAccount.update({
+                            where: { id: bot.id },
+                            data: { sessionCookie: encryptData(cookie) }
+                        });
+                    } catch (e) { /* 会话保存失败不影响扫描 */ }
+                } catch (e) {
+                    console.error(`机器人「${bot.name}」登录失败: ${e.message}`);
+                    continue;
+                }
             }
 
             console.log(`[${new Date().toLocaleString()}] 按机器人「${bot.name}」配置开始扫描（间隔 ${interval} 分钟，站点 ${sites.join(', ')}）...`);

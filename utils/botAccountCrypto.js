@@ -40,4 +40,4 @@ function decryptPassword(encrypted) {
     }
 }
 
-module.exports = { encryptPassword, decryptPassword };
+module.exports = { encryptPassword, decryptPassword, encryptData: encryptPassword, decryptData: decryptPassword };
