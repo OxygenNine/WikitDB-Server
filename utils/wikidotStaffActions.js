@@ -58,16 +58,20 @@ async function login(username, password) {
             });
             const cookies = res.headers['set-cookie'] || [];
             let sessionId = '';
+            let token7 = '123456';
             for (const c of cookies) {
                 const m = String(c).match(/WIKIDOT_SESSION_ID=([^;]+)/);
                 if (m) {
                     sessionId = m[1];
-                    break;
+                }
+                const tm = String(c).match(/wikidot_token7=([^;]+)/);
+                if (tm) {
+                    token7 = tm[1];
                 }
             }
             if (!sessionId) throw new Error('登录响应缺少会话');
 
-            const cookie = `WIKIDOT_SESSION_ID=${sessionId}; wikidot_token7=123456;`;
+            const cookie = `WIKIDOT_SESSION_ID=${sessionId}; wikidot_token7=${token7};`;
             // 验证 session 真实有效（限流时返回的 session 无效）
             const valid = await verifySession(cookie, username);
             if (!valid) throw new Error('登录 session 未验证通过（可能被限流）');
@@ -95,71 +99,62 @@ function extractToken(html) {
     return m ? m[1] : '123456';
 }
 
+/** 从 cookie 提取 wikidot_token7 */
+function extractToken7(cookie) {
+    const m = String(cookie || '').match(/wikidot_token7=([^;]+)/);
+    return m ? m[1] : '123456';
+}
+
 /**
- * 给页面添加标签（通过 Wikidot 编辑页 /{page}/edit）
+ * 给页面添加标签（通过 Wikidot saveTags 接口）
+ * 流程：GET 页面取 pageId + 现有标签 → 合并 → POST action=WikiPageAction&event=saveTags
  * @returns {Promise<{tags: string[], httpStatus: number}>}
  */
 async function addTag(baseUrl, pageName, cookie, tagName) {
-    // Wikidot 编辑页正确 URL：/{page}/edit（/page/edittags/ 不存在）
-    const editUrl = `${baseUrl}/${encodeURIComponent(pageName)}/edit`;
-    const getRes = await axios.get(editUrl, {
+    // 1. 获取页面 pageId 与现有标签
+    const pageUrl = `${baseUrl}/${encodeURIComponent(pageName)}`;
+    const pageRes = await axios.get(pageUrl, {
         headers: buildHeaders(cookie),
         timeout: 20000,
         maxRedirects: 5,
         validateStatus: (s) => s >= 200 && s < 400
     });
-    const $ = cheerio.load(getRes.data);
-
-    // 无编辑权限时 Wikidot 返回普通页面（无编辑表单）
-    const hasEditForm = $('#edit-page-form').length > 0
-        || $('textarea[name="source"]').length > 0
-        || $('input[name="wikidot_token7"]').length > 0;
-    if (!hasEditForm) {
-        throw new Error(`无编辑权限：机器人账号不是该站点成员，或站点禁止编辑「${pageName}」`);
+    const $ = cheerio.load(pageRes.data);
+    const pageIdMatch = String(pageRes.data).match(/WIKIREQUEST\.info\.pageId\s*=\s*(\d+)/);
+    if (!pageIdMatch) {
+        throw new Error(`无法获取页面 ID（页面可能不存在或无权限）：${pageName}`);
     }
+    const pageId = pageIdMatch[1];
 
-    const token = extractToken(getRes.data);
-
-    // 读取现有标签（编辑表单 tags 字段，逗号分隔）
-    let existing = [];
-    $('#edit-page-form textarea[name="tags"], #edit-page-form input[name="tags"]').each((_, el) => {
-        existing = String($(el).val() || '').split(',').map((t) => t.trim()).filter(Boolean);
+    // 现有标签
+    const existing = [];
+    $('.page-tags a').each((_, el) => {
+        const text = $(el).text().trim();
+        if (text) existing.push(text);
     });
-    // 若表单结构不同，退回从页面标签链接解析
-    if (existing.length === 0) {
-        $('.page-tags a').each((_, el) => {
-            const text = $(el).text().trim();
-            if (text) existing.push(text);
-        });
-    }
     // 去重合并新标签
     const merged = existing.filter((t, i) => existing.indexOf(t) === i);
     const normalized = tagName ? String(tagName).trim() : '';
     if (normalized && !merged.includes(normalized)) merged.push(normalized);
 
-    // 提取编辑表单全部字段（source/title/lock 等），覆盖 tags
-    const formFields = {};
-    $('#edit-page-form input[name], #edit-page-form textarea[name], #edit-page-form select[name]').each((_, el) => {
-        const name = $(el).attr('name');
-        if (name) formFields[name] = String($(el).val() || '');
-    });
-
-    const params = {
-        ...formFields,
-        tags: merged.join(', '),
+    // 2. 调用 saveTags 保存标签（空格分隔）
+    const postRes = await axios.post(`${baseUrl}/ajax-module-connector.php`, new URLSearchParams({
+        tags: merged.join(' '),
+        pageId,
         action: 'WikiPageAction',
-        event: 'savePage',
-        mode: 'page',
-        page_unix_name: pageName,
-        wikidot_token7: token
-    };
-
-    const postRes = await axios.post(editUrl, new URLSearchParams(params).toString(), {
+        event: 'saveTags',
+        wikidot_token7: extractToken7(cookie)
+    }).toString(), {
         headers: { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' },
         timeout: 30000,
         maxRedirects: 5,
         validateStatus: (s) => s >= 200 && s < 400
     });
+
+    const data = postRes.data;
+    if (data && typeof data === 'object' && data.status && data.status !== 'ok') {
+        throw new Error(`保存标签失败: ${data.message || data.status}`);
+    }
     return { tags: merged, httpStatus: postRes.status };
 }
 
