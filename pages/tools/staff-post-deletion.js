@@ -33,6 +33,18 @@ const StaffPostDeletion = () => {
     const [botNewUsername, setBotNewUsername] = useState('');
     const [botNewPassword, setBotNewPassword] = useState('');
     const [botMsg, setBotMsg] = useState('');
+    const [creatingBot, setCreatingBot] = useState(false);
+
+    // 安全格式化日期，避免无效时间戳导致渲染崩溃
+    const formatBotDate = (d) => {
+        try {
+            const dt = new Date(d);
+            if (isNaN(dt.getTime())) return '未知时间';
+            return dt.toLocaleString('zh-CN', { hour12: false });
+        } catch (e) {
+            return '未知时间';
+        }
+    };
 
     useEffect(() => {
         setIsLoggedIn(!!window.localStorage.getItem('username'));
@@ -86,10 +98,12 @@ const StaffPostDeletion = () => {
 
     const createBot = async () => {
         setBotMsg('');
+        if (creatingBot) return;
         if (!botName.trim() || !botNewUsername.trim() || !botNewPassword) {
             setBotMsg('请填写机器人名称、账号和密码');
             return;
         }
+        setCreatingBot(true);
         try {
             const res = await fetch('/api/tools/bot-accounts', {
                 method: 'POST',
@@ -105,6 +119,8 @@ const StaffPostDeletion = () => {
             await loadBots();
         } catch (e) {
             setBotMsg('创建失败：' + e.message);
+        } finally {
+            setCreatingBot(false);
         }
     };
 
@@ -250,15 +266,15 @@ const StaffPostDeletion = () => {
                                         <i className="fa-solid fa-robot text-gray-500"></i>
                                         <div className="min-w-0">
                                             <div className="text-gray-200 font-medium truncate">{bot.name}</div>
-                                            <div className="text-xs text-gray-500 truncate">{bot.username} · 创建于 {new Date(bot.createdAt).toLocaleString('zh-CN', { hour12: false })}</div>
+                                            <div className="text-xs text-gray-500 truncate">{bot.username} · 创建于 {formatBotDate(bot.createdAt)}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
-                                        <button onClick={() => useBot(bot)}
+                                        <button type="button" onClick={() => useBot(bot)}
                                             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30'}`}>
                                             {selectedBotId === bot.id ? '✓ 使用中' : '使用'}
                                         </button>
-                                        <button onClick={() => deleteBot(bot.id)}
+                                        <button type="button" onClick={() => deleteBot(bot.id)}
                                             className="px-3 py-1.5 rounded text-xs font-medium bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 transition-colors">
                                             <i className="fa-solid fa-trash-can"></i>
                                         </button>
@@ -291,9 +307,13 @@ const StaffPostDeletion = () => {
                                 placeholder="Wikidot 密码" />
                         </div>
                     </div>
-                    <button onClick={createBot}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                        <i className="fa-solid fa-plus mr-1.5"></i>创建机器人
+                    <button type="button" onClick={createBot} disabled={creatingBot}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                        {creatingBot ? (
+                            <><i className="fa-solid fa-spinner fa-spin mr-1.5"></i>创建中...</>
+                        ) : (
+                            <><i className="fa-solid fa-plus mr-1.5"></i>创建机器人</>
+                        )}
                     </button>
                 </div>
 
@@ -386,7 +406,7 @@ const StaffPostDeletion = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button onClick={handleSubmit} disabled={loading}
+                    <button type="button" onClick={handleSubmit} disabled={loading}
                         className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium disabled:opacity-50">
                         {loading ? (
                             <><i className="fa-solid fa-spinner fa-spin mr-2"></i>执行中...</>
