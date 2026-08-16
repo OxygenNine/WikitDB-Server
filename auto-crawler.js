@@ -3,13 +3,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const http = require('http');
 const https = require('https');
+const { spawn } = require('child_process');
 const prisma = require('./lib/prisma');
 const config = require('./wikitdb.config.js');
-const { fetchCategories, fetchThreads, fetchPosts } = require('./utils/wikidotForum');
-const { getGraphQLEndpoint } = require('./utils/graphql');
-const { buildTimerIframe, buildAnnouncementText, buildAnnouncementTitle } = require('./utils/staffPostDeletion');
-const { login, addTag, postAnnouncement, buildHeaders, verifySession } = require('./utils/wikidotStaffActions');
-const { decryptPassword, encryptData } = require('./utils/botAccountCrypto');
+const { buildBackupArgs, getWikiName } = require('./utils/wikitBackup');
 
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 });
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 });
@@ -303,13 +300,7 @@ async function runCrawler() {
                         const key = `user_votes_${user.toLowerCase().replace(/_/g, '-').replace(/ /g, '-')}`;
                         const record = await prisma.setting.findUnique({ where: { key } });
                         let existingMap = new Map();
-                        if (record) {
-                            // lib/prisma.js 的 setting 扩展已自动解析 value 为对象，避免二次 JSON.parse
-                            const parsed = typeof record.value === 'string' ? JSON.parse(record.value) : record.value;
-                            if (Array.isArray(parsed)) {
-                                parsed.forEach(v => existingMap.set(`${v.wiki}:${v.page}`, v));
-                            }
-                        }
+                        if (record) JSON.parse(record.value).forEach(v => existingMap.set(`${v.wiki}:${v.page}`, v));
                         
                         newVotes.forEach(nv => {
                             const id = `${nv.wiki}:${nv.page}`;
@@ -342,372 +333,46 @@ async function runCrawler() {
 cron.schedule('0 */3 * * *', () => runCrawler());
 runCrawler();
 
-// --- 论坛同步定时任务 ---
+let isBackupRunning = false;
 
-let isForumSyncing = false;
-
-async function runForumSync() {
-    if (isForumSyncing) {
-        console.log(`[${new Date().toLocaleString()}] 论坛同步尚未结束，跳过本次触发。`);
+async function runWikitBackup() {
+    if (isBackupRunning) {
+        console.log(`[${new Date().toLocaleString()}] Wikit backup is already running; skipping.`);
         return;
     }
-    isForumSyncing = true;
 
-    const sites = config.SUPPORT_WIKI.filter(w => w.FORUM_SYNC);
-    if (sites.length === 0) { isForumSyncing = false; return; }
-
-    console.log(`\n[${new Date().toLocaleString()}] 开始论坛数据同步 (${sites.length} 个站点)...`);
-
-    for (const wiki of sites) {
-        try {
-            const categories = await fetchCategories(wiki.URL);
-            console.log(`[${wiki.PARAM}] 获取到 ${categories.length} 个分类`);
-
-            for (const cat of categories) {
-                const existing = await prisma.forumCategory.findFirst({
-                    where: { siteParam: wiki.PARAM, categoryId: cat.categoryId }
-                });
-                if (existing) {
-                    await prisma.forumCategory.update({
-                        where: { id: existing.id },
-                        data: { title: cat.title, description: cat.description, threadsCount: cat.threadsCount, postsCount: cat.postsCount, lastSyncedAt: new Date().toISOString() }
-                    });
-                } else {
-                    await prisma.forumCategory.create({
-                        data: { siteParam: wiki.PARAM, categoryId: cat.categoryId, title: cat.title, description: cat.description, threadsCount: cat.threadsCount, postsCount: cat.postsCount, lastSyncedAt: new Date().toISOString() }
-                    });
-                }
-
-                let page = 1, maxPage = 1;
-                do {
-                    const result = await fetchThreads(wiki.URL, cat.categoryId, page);
-                    maxPage = result.maxPage;
-
-                    for (const thread of result.threads) {
-                        const existingThread = await prisma.forumThread.findFirst({
-                            where: { siteParam: wiki.PARAM, threadId: thread.threadId }
-                        });
-                        const needSync = !existingThread || existingThread.postCount !== thread.postCount;
-
-                        if (existingThread) {
-                            await prisma.forumThread.update({
-                                where: { id: existingThread.id },
-                                data: { categoryId: cat.categoryId, title: thread.title, createdBy: thread.createdBy, createdAt: thread.createdAt, postCount: thread.postCount, isSticky: thread.isSticky, isLocked: thread.isLocked, lastSyncedAt: new Date().toISOString() }
-                            });
-                        } else {
-                            await prisma.forumThread.create({
-                                data: { siteParam: wiki.PARAM, threadId: thread.threadId, categoryId: cat.categoryId, title: thread.title, createdBy: thread.createdBy, createdAt: thread.createdAt, postCount: thread.postCount, isSticky: thread.isSticky, isLocked: thread.isLocked, lastSyncedAt: new Date().toISOString() }
-                            });
-                        }
-
-                        if (needSync) {
-                            let postPage = 1, postMaxPage = 1;
-                            do {
-                                const postResult = await fetchPosts(wiki.URL, thread.threadId, postPage);
-                                postMaxPage = postResult.maxPage;
-
-                                for (const post of postResult.posts) {
-                                    const existingPost = await prisma.forumPost.findFirst({
-                                        where: { siteParam: wiki.PARAM, postId: post.postId }
-                                    });
-                                    const postData = { threadId: thread.threadId, parentId: post.parentId || null, title: post.title, contentHtml: post.contentHtml, author: post.author, authorId: post.authorId || null, createdAt: post.createdAt };
-                                    if (existingPost) {
-                                        await prisma.forumPost.update({ where: { id: existingPost.id }, data: postData });
-                                    } else {
-                                        await prisma.forumPost.create({ data: { siteParam: wiki.PARAM, postId: post.postId, ...postData } });
-                                    }
-                                }
-                                postPage++;
-                            } while (postPage <= postMaxPage);
-                            console.log(`  [${wiki.PARAM}] 帖子 t-${thread.threadId} 同步完成`);
-                        }
-                    }
-                    page++;
-                } while (page <= maxPage);
-            }
-            console.log(`[${wiki.PARAM}] 论坛同步完成`);
-        } catch (e) {
-            console.error(`[${wiki.PARAM}] 论坛同步失败: ${e.message}`);
-        }
+    const wikiNames = config.SUPPORT_WIKI.map(getWikiName).filter(Boolean);
+    if (wikiNames.length === 0) {
+        console.error(`[${new Date().toLocaleString()}] No valid wikis configured for backup.`);
+        return;
     }
 
-    isForumSyncing = false;
-    console.log(`[${new Date().toLocaleString()}] 论坛同步全部结束。`);
-}
+    isBackupRunning = true;
+    const args = buildBackupArgs({ wikiNames, keepRemoved: true });
+    console.log(`[${new Date().toLocaleString()}] Starting wikit backup for ${wikiNames.length} wikis.`);
 
-// 每天凌晨 4 点执行论坛同步
-
-// --- 自动删帖扫描：自动添加「待删除」标签 + 发布删帖公告 ---
-
-const AUTO_DELETE_DEFAULT_SCORE = -5;          // 默认删除线（评分低于/等于即宣告删除）
-const AUTO_DELETE_COUNTDOWN_HOURS = 72;        // 默认倒计时小时数
-const AUTO_DELETE_TAG = '待删除';              // 默认标签名
-
-let isAutoDeleting = false;
-
-/** 从 Wikit GraphQL 分页拉取站点带「原创」标签的页面（含评分） */
-async function fetchAllSitePages(siteConfig) {
-    const endpoint = getGraphQLEndpoint(siteConfig);
-    let actualWikiName = '';
-    try {
-        actualWikiName = new URL(siteConfig.URL).hostname.replace(/^www\./i, '').split('.')[0];
-    } catch (e) {
-        actualWikiName = siteConfig.URL.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('.')[0];
-    }
-
-    const allNodes = [];
-    let page = 1;
-    const PAGE_SIZE = 100; // Wikit GraphQL 单页上限为 100
-    while (true) {
-        const res = await axios.post(endpoint, {
-            query: `query { articles(wiki: "${actualWikiName}", includeTags: ["原创"], page: ${page}, pageSize: ${PAGE_SIZE}) { nodes { title page rating } } }`
-        }, { timeout: 30000 });
-        const nodes = res.data?.data?.articles?.nodes || [];
-        allNodes.push(...nodes);
-        if (nodes.length < PAGE_SIZE) break;
-        page++;
-        await sleep(500);
-    }
-    return allNodes;
-}
-
-/** 扫描单个站点：拉取页面 → 筛低分 → 打标签 + 发公告（cookie 为空时仅扫描不写操作） */
-async function scanSiteForDeletion(siteConfig, cookie, opts = {}) {
-    const deleteScore = opts.deleteScore ?? siteConfig.AUTO_DELETE_SCORE ?? AUTO_DELETE_DEFAULT_SCORE;
-    const countdownHours = opts.countdownHours ?? siteConfig.AUTO_DELETE_COUNTDOWN_HOURS ?? AUTO_DELETE_COUNTDOWN_HOURS;
-    const tag = opts.tag || siteConfig.AUTO_DELETE_TAG || AUTO_DELETE_TAG;
-    const canWrite = !!cookie;
-    const dedupPrefix = opts.dedupPrefix || 'auto-deletion:v1';
-    const baseUrl = siteConfig.URL.replace(/\/$/, '');
-
-    console.log(`[${new Date().toLocaleString()}] 自动扫描站点 [${siteConfig.PARAM}]（删除线 ${deleteScore}，倒计时 ${countdownHours}h，标签「${tag}」${canWrite ? '' : '，仅扫描'}）...`);
-    let pages;
-    try {
-        pages = await fetchAllSitePages(siteConfig);
-    } catch (e) {
-        console.error(`[${siteConfig.PARAM}] 拉取页面清单失败: ${e.message}`);
-        return { scanned: false, candidates: 0 };
-    }
-
-    // 筛选低分候选（按页面名去重，避免同一页面在不同分类重复）
-    const candidates = [];
-    const seenPages = new Set();
-    for (const p of pages) {
-        if ((p.rating ?? 0) <= deleteScore && !seenPages.has(p.page)) {
-            seenPages.add(p.page);
-            candidates.push(p);
-        }
-    }
-    console.log(`[${siteConfig.PARAM}] 共 ${pages.length} 个原创页面，低分候选 ${candidates.length} 页`);
-
-    if (!canWrite) {
-        candidates.slice(0, 30).forEach((c) => {
-            console.log(`  [扫描] ${c.page} (rating=${c.rating})`);
+    await new Promise((resolve) => {
+        const child = spawn('wikit', args, {
+            cwd: process.cwd(),
+            env: process.env,
+            shell: false,
+            windowsHide: true,
+            stdio: ['ignore', 'pipe', 'pipe'],
         });
-        return { scanned: true, candidates: candidates.length };
-    }
 
-    for (const p of candidates) {
-        const key = `${dedupPrefix}:${siteConfig.PARAM}:${p.page}`;
-        try {
-            const existing = await prisma.setting.findUnique({ where: { key } });
-            if (existing) {
-                console.log(`  [跳过] ${p.page} 已处理过`);
-                continue;
-            }
-        } catch (e) { /* 忽略查询错误 */ }
-
-        // 验证页面真实存在：Wikit 数据可能滞后（含已删除页面），404 则标记跳过，避免反复失败
-        try {
-            const checkRes = await axios.get(`${baseUrl}/${encodeURIComponent(p.page)}`, {
-                headers: buildHeaders(cookie),
-                timeout: 20000,
-                maxRedirects: 5,
-                validateStatus: (s) => s >= 200 && s < 400
-            });
-        } catch (e) {
-            const nfValue = JSON.stringify({ page: p.page, rating: p.rating, status: 'notfound', processedAt: Date.now() });
-            try {
-                await prisma.setting.upsert({ where: { key }, update: { value: nfValue }, create: { key, value: nfValue } });
-            } catch (e2) { /* 忽略 */ }
-            console.log(`  [跳过] ${p.page} 页面不存在（可能已删除）`);
-            await sleep(1200);
-            continue;
-        }
-
-        try {
-            // 1. 添加「待删除」标签
-            const tagRes = await addTag(baseUrl, p.page, cookie, tag);
-            await sleep(1200);
-
-            // 2. 发布「职员帖：删除宣告」公告（含删除倒计时 iframe）
-            const timerIframe = buildTimerIframe(`${process.env.SITE_ORIGIN || ''}/timer/timer.html`, {
-                deleteScore,
-                countdownHours
-            });
-            const text = buildAnnouncementText({ deleteScore, timerIframe, pageName: p.page });
-            const title = buildAnnouncementTitle();
-            const postRes = await postAnnouncement(baseUrl, p.page, cookie, title, text);
-
-            // 记录处理结果，避免重复
-            const value = JSON.stringify({ page: p.page, rating: p.rating, tag, target: postRes.target, processedAt: Date.now() });
-            await prisma.setting.upsert({
-                where: { key },
-                update: { value },
-                create: { key, value }
-            });
-            console.log(`  [成功] ${p.page} (rating=${p.rating}) 已打标签「${tag}」并发布公告 → ${postRes.target}`);
-        } catch (e) {
-            console.error(`  [失败] ${p.page}: ${e.message}`);
-            // 记录失败状态，避免对同一页面反复重试
-            const failValue = JSON.stringify({
-                page: p.page, rating: p.rating, tag,
-                status: 'failed', error: String(e.message || '').slice(0, 200),
-                processedAt: Date.now()
-            });
-            try {
-                await prisma.setting.upsert({ where: { key }, update: { value: failValue }, create: { key, value: failValue } });
-            } catch (e2) { /* 忽略 */ }
-        }
-        await sleep(1200);
-    }
-    return { scanned: true, candidates: candidates.length };
-}
-
-async function runAutoStaffDeletion() {
-    if (isAutoDeleting) {
-        console.log(`[${new Date().toLocaleString()}] 自动删帖扫描尚未结束，跳过本次触发。`);
-        return;
-    }
-    isAutoDeleting = true;
-    try {
-        const activeSites = config.SUPPORT_WIKI.filter((w) => w.AUTO_STAFF_DELETION !== false);
-        if (activeSites.length === 0) {
-            console.log(`[${new Date().toLocaleString()}] 没有启用自动删帖的站点。`);
-            return;
-        }
-
-        // 机器人凭据：未配置则仅扫描不写操作（安全护栏）
-        const botUser = process.env.WIKIDOT_BOT_USER || '';
-        const botPass = process.env.WIKIDOT_BOT_PASS || '';
-        let cookie = null;
-        if (botUser && botPass) {
-            try {
-                cookie = await login(botUser, botPass);
-                console.log(`[${new Date().toLocaleString()}] 机器人登录成功，将自动执行打标签 + 发公告。`);
-            } catch (e) {
-                console.error('机器人登录失败，本次仅扫描:', e.message);
-            }
-        } else {
-            console.log(`[${new Date().toLocaleString()}] 未配置机器人账号（WIKIDOT_BOT_USER/PASS），本次仅扫描站点。`);
-        }
-
-        for (const site of activeSites) {
-            await scanSiteForDeletion(site, cookie);
-        }
-        console.log(`[${new Date().toLocaleString()}] 自动删帖扫描结束。`);
-    } catch (e) {
-        console.error(`自动删帖扫描异常: ${e.message}`);
-    } finally {
-        isAutoDeleting = false;
-    }
-}
-
-// --- 机器人定时扫描：按每个机器人配置的扫描间隔与指定站点自动扫描 ---
-
-let isBotScanRunning = false;
-
-async function runBotScheduledScans() {
-    if (isBotScanRunning) {
-        console.log(`[${new Date().toLocaleString()}] 机器人扫描仍在进行，跳过本次检查。`);
-        return;
-    }
-    isBotScanRunning = true;
-    const now = Date.now();
-    try {
-        const bots = await prisma.botAccount.findMany({
-            where: { scanInterval: { not: null } }
+        child.stdout.on('data', (chunk) => process.stdout.write(`[wikit] ${chunk}`));
+        child.stderr.on('data', (chunk) => process.stderr.write(`[wikit] ${chunk}`));
+        child.on('error', (error) => {
+            console.error(`[${new Date().toLocaleString()}] Failed to start wikit: ${error.message}`);
         });
-        if (bots.length === 0) return;
+        child.on('close', (code) => {
+            console.log(`[${new Date().toLocaleString()}] Wikit backup finished with exit code ${code}.`);
+            resolve();
+        });
+    });
 
-        for (const bot of bots) {
-            const interval = bot.scanInterval;
-            if (!interval || interval <= 0) continue;
-
-            // 判断是否到扫描时间（上次扫描 + 间隔）
-            const lastScan = bot.lastScanAt ? new Date(bot.lastScanAt).getTime() : 0;
-            if (lastScan && (now - lastScan) < interval * 60 * 1000) continue;
-
-            // 读取指定扫描站点
-            let sites = [];
-            try { sites = JSON.parse(bot.scanSites || '[]'); } catch (e) { sites = []; }
-            if (!Array.isArray(sites) || sites.length === 0) {
-                console.log(`[${new Date().toLocaleString()}] 机器人「${bot.name}」未指定扫描站点，跳过。`);
-                continue;
-            }
-
-            // 获取有效会话：优先复用持久化 session（避免频繁登录触发限流），否则登录并保存
-            let cookie = '';
-            if (bot.sessionCookie) {
-                try {
-                    const saved = decryptPassword(bot.sessionCookie);
-                    if (saved && await verifySession(saved, bot.username)) {
-                        cookie = saved;
-                        console.log(`[${new Date().toLocaleString()}] 机器人「${bot.name}」复用持久化会话`);
-                    }
-                } catch (e) { /* 会话无效则重新登录 */ }
-            }
-            if (!cookie) {
-                try {
-                    cookie = await login(bot.username, decryptPassword(bot.password));
-                    try {
-                        await prisma.botAccount.update({
-                            where: { id: bot.id },
-                            data: { sessionCookie: encryptData(cookie) }
-                        });
-                    } catch (e) { /* 会话保存失败不影响扫描 */ }
-                } catch (e) {
-                    console.error(`机器人「${bot.name}」登录失败: ${e.message}`);
-                    continue;
-                }
-            }
-
-            console.log(`[${new Date().toLocaleString()}] 按机器人「${bot.name}」配置开始扫描（间隔 ${interval} 分钟，站点 ${sites.join(', ')}）...`);
-            for (const siteParam of sites) {
-                const siteConfig = config.SUPPORT_WIKI.find((w) => w.PARAM === siteParam);
-                if (!siteConfig) {
-                    console.error(`[${siteParam}] 站点配置不存在，跳过。`);
-                    continue;
-                }
-                await scanSiteForDeletion(siteConfig, cookie, {
-                    dedupPrefix: `auto-deletion:bot:${bot.id}`,
-                    deleteScore: bot.deleteScore,
-                    countdownHours: bot.countdownHours
-                });
-            }
-
-            // 更新上次扫描时间
-            try {
-                await prisma.botAccount.update({
-                    where: { id: bot.id },
-                    data: { lastScanAt: new Date() }
-                });
-            } catch (e) { /* 忽略 */ }
-            console.log(`[${new Date().toLocaleString()}] 机器人「${bot.name}」扫描完成。`);
-        }
-    } catch (e) {
-        console.error(`机器人定时扫描异常: ${e.message}`);
-    } finally {
-        isBotScanRunning = false;
-    }
+    isBackupRunning = false;
 }
 
-// 每天凌晨 3 点执行全局自动删帖扫描（服务器默认 Bot，未配置则仅扫描）
-cron.schedule('0 3 * * *', () => runAutoStaffDeletion());
-runAutoStaffDeletion();
-
-// 每 5 分钟检查一次机器人定时扫描配置（按间隔与指定站点执行，支持最短 15 分钟间隔）
-cron.schedule('*/5 * * * *', () => runBotScheduledScans());
-runBotScheduledScans();
-
-cron.schedule('0 4 * * *', () => runForumSync());
+// Back up every configured wiki daily at 12:00 China Standard Time.
+cron.schedule('0 12 * * *', () => runWikitBackup(), { timezone: 'Asia/Shanghai' });
