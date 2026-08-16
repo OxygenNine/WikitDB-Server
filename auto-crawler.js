@@ -439,7 +439,7 @@ const AUTO_DELETE_TAG = '待删除';              // 默认标签名
 
 let isAutoDeleting = false;
 
-/** 从 Wikit GraphQL 分页拉取站点全部页面（含评分） */
+/** 从 Wikit GraphQL 分页拉取站点带「原创」标签的页面（含评分） */
 async function fetchAllSitePages(siteConfig) {
     const endpoint = getGraphQLEndpoint(siteConfig);
     let actualWikiName = '';
@@ -454,7 +454,7 @@ async function fetchAllSitePages(siteConfig) {
     const PAGE_SIZE = 100; // Wikit GraphQL 单页上限为 100
     while (true) {
         const res = await axios.post(endpoint, {
-            query: `query { articles(wiki: "${actualWikiName}", page: ${page}, pageSize: ${PAGE_SIZE}) { nodes { title page rating } } }`
+            query: `query { articles(wiki: "${actualWikiName}", includeTags: ["原创"], page: ${page}, pageSize: ${PAGE_SIZE}) { nodes { title page rating } } }`
         }, { timeout: 30000 });
         const nodes = res.data?.data?.articles?.nodes || [];
         allNodes.push(...nodes);
@@ -492,7 +492,7 @@ async function scanSiteForDeletion(siteConfig, cookie, opts = {}) {
             candidates.push(p);
         }
     }
-    console.log(`[${siteConfig.PARAM}] 共 ${pages.length} 页，低分候选 ${candidates.length} 页`);
+    console.log(`[${siteConfig.PARAM}] 共 ${pages.length} 个原创页面，低分候选 ${candidates.length} 页`);
 
     if (!canWrite) {
         candidates.slice(0, 30).forEach((c) => {
