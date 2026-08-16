@@ -222,7 +222,7 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
         params.action = 'ForumAction';
         params.event = 'savePost';
         params.threadId = threadId;
-        params.text = text;
+        params.source = text; // Wikidot 发帖字段名是 source（非 text）
         if (!params.wikidot_token7) params.wikidot_token7 = token7;
         url = ajaxUrl;
         label = `线程 t-${threadId}`;
@@ -232,7 +232,7 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
         params.event = 'saveThread';
         params.categoryId = categoryId;
         params.title = title;
-        params.text = text;
+        params.source = text;
         params.wikidot_token7 = token7;
         url = ajaxUrl;
         label = `分类 c-${categoryId}`;
