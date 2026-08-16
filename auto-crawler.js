@@ -656,8 +656,8 @@ async function runBotScheduledScans() {
 cron.schedule('0 3 * * *', () => runAutoStaffDeletion());
 runAutoStaffDeletion();
 
-// 每 10 分钟检查一次机器人定时扫描配置（按间隔与指定站点执行）
-cron.schedule('*/10 * * * *', () => runBotScheduledScans());
+// 每 5 分钟检查一次机器人定时扫描配置（按间隔与指定站点执行，支持最短 15 分钟间隔）
+cron.schedule('*/5 * * * *', () => runBotScheduledScans());
 runBotScheduledScans();
 
 cron.schedule('0 4 * * *', () => runForumSync());

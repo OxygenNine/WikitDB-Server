@@ -50,6 +50,7 @@ const StaffPostDeletion = () => {
     // 扫描间隔可选项：值（分钟）
     const SCAN_INTERVAL_OPTIONS = [
         { value: 0, label: '不自动扫描' },
+        { value: 15, label: '每 15 分钟' },
         { value: 60, label: '每 1 小时' },
         { value: 180, label: '每 3 小时' },
         { value: 360, label: '每 6 小时' },
