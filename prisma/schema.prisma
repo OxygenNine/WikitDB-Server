@@ -91,13 +91,16 @@ model Setting {
 }
 
 model BotAccount {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(50)
-  username  String   @db.VarChar(100)
-  password  String   @db.Text
-  createdBy String   @db.VarChar(50)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(50)
+  username    String    @db.VarChar(100)
+  password    String    @db.Text
+  createdBy   String    @db.VarChar(50)
+  scanInterval Int? // 自动扫描间隔（分钟），null/0 = 不自动扫描
+  scanSites   String?   @db.Text // JSON 数组，如 ["dfc","brcn"]
+  lastScanAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([createdBy])
   @@map("bot_accounts")

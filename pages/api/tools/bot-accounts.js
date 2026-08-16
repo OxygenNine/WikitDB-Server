@@ -3,7 +3,24 @@ import { withAuth } from '../../../utils/withAuth';
 import { encryptPassword } from '../../../utils/botAccountCrypto';
 
 // 密码字段绝不回显
-const PUBLIC_SELECT = { id: true, name: true, username: true, createdBy: true, createdAt: true, updatedAt: true };
+const PUBLIC_SELECT = {
+    id: true, name: true, username: true, createdBy: true,
+    scanInterval: true, scanSites: true, lastScanAt: true,
+    createdAt: true, updatedAt: true
+};
+
+// 解析扫描站点：兼容数组或 JSON 字符串，返回字符串数组
+function parseSites(sites) {
+    if (Array.isArray(sites)) return sites.map((s) => String(s).trim()).filter(Boolean);
+    if (typeof sites === 'string' && sites.trim()) {
+        try {
+            const arr = JSON.parse(sites);
+            if (Array.isArray(arr)) return arr.map((s) => String(s).trim()).filter(Boolean);
+        } catch (e) { /* 忽略 */ }
+        return sites.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+    return [];
+}
 
 async function handler(req, res) {
     // GET：列出当前用户创建的机器人
@@ -14,19 +31,29 @@ async function handler(req, res) {
                 orderBy: { createdAt: 'desc' },
                 select: PUBLIC_SELECT
             });
-            return res.status(200).json({ success: true, bots });
+            // scanSites 从 JSON 字符串解析为数组返回
+            const safe = bots.map((b) => ({
+                ...b,
+                scanSites: (() => {
+                    try { return JSON.parse(b.scanSites || '[]'); } catch { return []; }
+                })()
+            }));
+            return res.status(200).json({ success: true, bots: safe });
         } catch (e) {
             console.error('查询机器人失败:', e.message);
             return res.status(500).json({ error: '查询机器人列表失败' });
         }
     }
 
-    // POST：创建机器人
+    // POST：创建机器人（支持扫描间隔与指定站点）
     if (req.method === 'POST') {
-        const { name, username, password } = req.body || {};
+        const { name, username, password, scanInterval, scanSites } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ error: '请填写机器人名称' });
         if (!username || !String(username).trim()) return res.status(400).json({ error: '请填写机器人账号' });
         if (!password || String(password).length < 4) return res.status(400).json({ error: '密码过短' });
+
+        const interval = parseInt(scanInterval, 10);
+        const sites = parseSites(scanSites);
 
         try {
             const bot = await prisma.botAccount.create({
@@ -34,14 +61,48 @@ async function handler(req, res) {
                     name: String(name).trim().slice(0, 50),
                     username: String(username).trim().slice(0, 100),
                     password: encryptPassword(password),
-                    createdBy: req.user.username
+                    createdBy: req.user.username,
+                    scanInterval: interval > 0 ? interval : null,
+                    scanSites: sites.length > 0 ? JSON.stringify(sites) : null
                 },
                 select: PUBLIC_SELECT
             });
-            return res.status(201).json({ success: true, bot });
+            return res.status(201).json({ success: true, bot: { ...bot, scanSites: sites } });
         } catch (e) {
             console.error('创建机器人失败:', e.message);
             return res.status(500).json({ error: '创建机器人失败' });
+        }
+    }
+
+    // PUT：编辑机器人（名称 / 扫描间隔 / 指定站点），仅创建者可编辑
+    if (req.method === 'PUT') {
+        const { id, name, scanInterval, scanSites } = req.body || {};
+        const botId = parseInt(id, 10);
+        if (!botId) return res.status(400).json({ error: '缺少机器人 ID' });
+
+        try {
+            const existing = await prisma.botAccount.findUnique({ where: { id: botId } });
+            if (!existing) return res.status(404).json({ error: '机器人不存在' });
+            if (existing.createdBy !== req.user.username) {
+                return res.status(403).json({ error: '无权编辑他人创建的机器人' });
+            }
+
+            const interval = parseInt(scanInterval, 10);
+            const sites = parseSites(scanSites);
+
+            const bot = await prisma.botAccount.update({
+                where: { id: botId },
+                data: {
+                    ...(name && String(name).trim() ? { name: String(name).trim().slice(0, 50) } : {}),
+                    scanInterval: interval > 0 ? interval : null,
+                    scanSites: sites.length > 0 ? JSON.stringify(sites) : null
+                },
+                select: PUBLIC_SELECT
+            });
+            return res.status(200).json({ success: true, bot: { ...bot, scanSites: sites } });
+        } catch (e) {
+            console.error('编辑机器人失败:', e.message);
+            return res.status(500).json({ error: '编辑机器人失败' });
         }
     }
 
@@ -69,3 +130,4 @@ async function handler(req, res) {
 }
 
 export default withAuth(handler);
+

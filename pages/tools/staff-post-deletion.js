@@ -34,6 +34,36 @@ const StaffPostDeletion = () => {
     const [botNewPassword, setBotNewPassword] = useState('');
     const [botMsg, setBotMsg] = useState('');
     const [creatingBot, setCreatingBot] = useState(false);
+    // 扫描配置（创建）
+    const [scanInterval, setScanInterval] = useState(720); // 分钟，0 = 不自动扫描
+    const [scanSites, setScanSites] = useState([]);        // 指定扫描站点（PARAM 数组）
+    // 编辑状态
+    const [editingBot, setEditingBot] = useState(null);
+    const [editName, setEditName] = useState('');
+    const [editInterval, setEditInterval] = useState(0);
+    const [editSites, setEditSites] = useState([]);
+
+    // 扫描间隔可选项：值（分钟）
+    const SCAN_INTERVAL_OPTIONS = [
+        { value: 0, label: '不自动扫描' },
+        { value: 60, label: '每 1 小时' },
+        { value: 180, label: '每 3 小时' },
+        { value: 360, label: '每 6 小时' },
+        { value: 720, label: '每 12 小时' },
+        { value: 1440, label: '每天' }
+    ];
+
+    // 把分钟间隔转成展示文本
+    const intervalLabel = (min) => {
+        const opt = SCAN_INTERVAL_OPTIONS.find((o) => o.value === min);
+        return opt ? opt.label : (min > 0 ? `每 ${Math.round(min / 60)} 小时` : '不自动扫描');
+    };
+
+    // 站点名展示
+    const siteName = (param) => {
+        const w = wikis.find((x) => x.PARAM === param);
+        return w ? w.NAME : param;
+    };
 
     // 安全格式化日期，避免无效时间戳导致渲染崩溃
     const formatBotDate = (d) => {
@@ -108,7 +138,13 @@ const StaffPostDeletion = () => {
             const res = await fetch('/api/tools/bot-accounts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: botName, username: botNewUsername, password: botNewPassword })
+                body: JSON.stringify({
+                    name: botName,
+                    username: botNewUsername,
+                    password: botNewPassword,
+                    scanInterval,
+                    scanSites
+                })
             });
             const d = await res.json();
             if (!res.ok) { setBotMsg(d.error || '创建失败'); return; }
@@ -121,6 +157,47 @@ const StaffPostDeletion = () => {
             setBotMsg('创建失败：' + e.message);
         } finally {
             setCreatingBot(false);
+        }
+    };
+
+    // 切换创建表单的扫描站点
+    const toggleScanSite = (param) => {
+        setScanSites((prev) => (prev.includes(param) ? prev.filter((s) => s !== param) : [...prev, param]));
+    };
+
+    // 开始编辑机器人
+    const startEditBot = (bot) => {
+        setEditingBot(bot);
+        setEditName(bot.name || '');
+        setEditInterval(bot.scanInterval || 0);
+        setEditSites(Array.isArray(bot.scanSites) ? bot.scanSites : []);
+    };
+
+    const cancelEditBot = () => {
+        setEditingBot(null);
+    };
+
+    const toggleEditSite = (param) => {
+        setEditSites((prev) => (prev.includes(param) ? prev.filter((s) => s !== param) : [...prev, param]));
+    };
+
+    // 保存编辑
+    const saveEditBot = async () => {
+        if (!editingBot) return;
+        setBotMsg('');
+        try {
+            const res = await fetch('/api/tools/bot-accounts', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: editingBot.id, name: editName, scanInterval: editInterval, scanSites: editSites })
+            });
+            const d = await res.json();
+            if (!res.ok) { setBotMsg(d.error || '保存失败'); return; }
+            setBotMsg(`机器人「${d.bot.name}」设置已更新`);
+            setEditingBot(null);
+            await loadBots();
+        } catch (e) {
+            setBotMsg('保存失败：' + e.message);
         }
     };
 
@@ -261,23 +338,35 @@ const StaffPostDeletion = () => {
                         <div className="space-y-2">
                             {bots.map((bot) => (
                                 <div key={bot.id}
-                                    className={`flex items-center justify-between gap-3 p-3 rounded-lg border text-sm ${selectedBotId === bot.id ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-gray-900/40 border-gray-700/40'}`}>
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <i className="fa-solid fa-robot text-gray-500"></i>
-                                        <div className="min-w-0">
-                                            <div className="text-gray-200 font-medium truncate">{bot.name}</div>
-                                            <div className="text-xs text-gray-500 truncate">{bot.username} · 创建于 {formatBotDate(bot.createdAt)}</div>
+                                    className={`p-3 rounded-lg border text-sm ${selectedBotId === bot.id ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-gray-900/40 border-gray-700/40'}`}>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <i className="fa-solid fa-robot text-gray-500"></i>
+                                            <div className="min-w-0">
+                                                <div className="text-gray-200 font-medium truncate">{bot.name}</div>
+                                                <div className="text-xs text-gray-500 truncate">{bot.username}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button type="button" onClick={() => useBot(bot)}
+                                                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30'}`}>
+                                                {selectedBotId === bot.id ? '✓ 使用中' : '使用'}
+                                            </button>
+                                            <button type="button" onClick={() => startEditBot(bot)}
+                                                className="px-3 py-1.5 rounded text-xs font-medium bg-gray-600/20 text-gray-300 border border-gray-500/30 hover:bg-gray-600/30 transition-colors">
+                                                <i className="fa-solid fa-gear"></i>
+                                            </button>
+                                            <button type="button" onClick={() => deleteBot(bot.id)}
+                                                className="px-3 py-1.5 rounded text-xs font-medium bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 transition-colors">
+                                                <i className="fa-solid fa-trash-can"></i>
+                                            </button>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <button type="button" onClick={() => useBot(bot)}
-                                            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30'}`}>
-                                            {selectedBotId === bot.id ? '✓ 使用中' : '使用'}
-                                        </button>
-                                        <button type="button" onClick={() => deleteBot(bot.id)}
-                                            className="px-3 py-1.5 rounded text-xs font-medium bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 transition-colors">
-                                            <i className="fa-solid fa-trash-can"></i>
-                                        </button>
+                                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                        <span><i className="fa-solid fa-clock mr-1"></i>自动扫描：{intervalLabel(bot.scanInterval || 0)}</span>
+                                        <span><i className="fa-solid fa-globe mr-1"></i>站点：{(Array.isArray(bot.scanSites) && bot.scanSites.length ? bot.scanSites.map(siteName).join('、') : '未指定')}</span>
+                                        <span><i className="fa-solid fa-history mr-1"></i>上次扫描：{bot.lastScanAt ? formatBotDate(bot.lastScanAt) : '从未'}</span>
+                                        <span><i className="fa-solid fa-calendar mr-1"></i>创建：{formatBotDate(bot.createdAt)}</span>
                                     </div>
                                 </div>
                             ))}
@@ -287,6 +376,55 @@ const StaffPostDeletion = () => {
                     {bots.length === 0 && (
                         <div className="p-4 rounded-lg bg-gray-900/40 border border-gray-700/40 text-center text-gray-500 text-sm">
                             还没有机器人，创建后即可在下方列表中选择使用
+                        </div>
+                    )}
+
+                    {editingBot && (
+                        <div className="p-4 rounded-lg bg-indigo-900/10 border border-indigo-500/30 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-indigo-300">编辑机器人「{editingBot.name}」</h3>
+                                <button type="button" onClick={cancelEditBot} className="text-gray-400 hover:text-white text-xs">
+                                    <i className="fa-solid fa-xmark mr-1"></i>取消
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">名称</label>
+                                    <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
+                                        className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-400 mb-1">自动扫描间隔</label>
+                                    <select value={editInterval} onChange={(e) => setEditInterval(parseInt(e.target.value, 10))}
+                                        className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5">
+                                        {SCAN_INTERVAL_OPTIONS.map((o) => (
+                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">指定扫描站点（可多选）</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {wikis.map((w) => (
+                                        <label key={w.PARAM}
+                                            className={`px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${editSites.includes(w.PARAM) ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300' : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-400'}`}>
+                                            <input type="checkbox" className="mr-1.5" checked={editSites.includes(w.PARAM)} onChange={() => toggleEditSite(w.PARAM)} />
+                                            {w.NAME}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button type="button" onClick={saveEditBot}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+                                    <i className="fa-solid fa-check mr-1.5"></i>保存设置
+                                </button>
+                                <button type="button" onClick={cancelEditBot}
+                                    className="px-4 py-2 bg-gray-600/30 text-gray-300 rounded-lg hover:bg-gray-600/50 transition-colors text-sm font-medium">
+                                    取消
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -305,6 +443,30 @@ const StaffPostDeletion = () => {
                             <input type="password" value={botNewPassword} onChange={(e) => setBotNewPassword(e.target.value)}
                                 className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
                                 placeholder="Wikidot 密码" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">自动扫描间隔</label>
+                            <select value={scanInterval} onChange={(e) => setScanInterval(parseInt(e.target.value, 10))}
+                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
+                                {SCAN_INTERVAL_OPTIONS.map((o) => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">指定扫描站点（可多选）</label>
+                            <div className="flex flex-wrap gap-2">
+                                {wikis.map((w) => (
+                                    <label key={w.PARAM}
+                                        className={`px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-colors ${scanSites.includes(w.PARAM) ? 'bg-indigo-600/30 border-indigo-500/50 text-indigo-300' : 'bg-gray-900 border-gray-600 text-gray-400 hover:border-gray-400'}`}>
+                                        <input type="checkbox" className="mr-1.5" checked={scanSites.includes(w.PARAM)} onChange={() => toggleScanSite(w.PARAM)} />
+                                        {w.NAME}
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                     <button type="button" onClick={createBot} disabled={creatingBot}

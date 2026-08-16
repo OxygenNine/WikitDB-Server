@@ -9,6 +9,7 @@ const { fetchCategories, fetchThreads, fetchPosts } = require('./utils/wikidotFo
 const { getGraphQLEndpoint } = require('./utils/graphql');
 const { buildTimerIframe, buildAnnouncementText, buildAnnouncementTitle } = require('./utils/staffPostDeletion');
 const { login, addTag, postAnnouncement } = require('./utils/wikidotStaffActions');
+const { decryptPassword } = require('./utils/botAccountCrypto');
 
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 });
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 });
@@ -464,6 +465,82 @@ async function fetchAllSitePages(siteConfig) {
     return allNodes;
 }
 
+/** 扫描单个站点：拉取页面 → 筛低分 → 打标签 + 发公告（cookie 为空时仅扫描不写操作） */
+async function scanSiteForDeletion(siteConfig, cookie, opts = {}) {
+    const deleteScore = opts.deleteScore ?? siteConfig.AUTO_DELETE_SCORE ?? AUTO_DELETE_DEFAULT_SCORE;
+    const countdownHours = opts.countdownHours ?? siteConfig.AUTO_DELETE_COUNTDOWN_HOURS ?? AUTO_DELETE_COUNTDOWN_HOURS;
+    const tag = opts.tag || siteConfig.AUTO_DELETE_TAG || AUTO_DELETE_TAG;
+    const canWrite = !!cookie;
+    const dedupPrefix = opts.dedupPrefix || 'auto-deletion:v1';
+    const baseUrl = siteConfig.URL.replace(/\/$/, '');
+
+    console.log(`[${new Date().toLocaleString()}] 自动扫描站点 [${siteConfig.PARAM}]（删除线 ${deleteScore}，倒计时 ${countdownHours}h，标签「${tag}」${canWrite ? '' : '，仅扫描'}）...`);
+    let pages;
+    try {
+        pages = await fetchAllSitePages(siteConfig);
+    } catch (e) {
+        console.error(`[${siteConfig.PARAM}] 拉取页面清单失败: ${e.message}`);
+        return { scanned: false, candidates: 0 };
+    }
+
+    // 筛选低分候选（按页面名去重，避免同一页面在不同分类重复）
+    const candidates = [];
+    const seenPages = new Set();
+    for (const p of pages) {
+        if ((p.rating ?? 0) <= deleteScore && !seenPages.has(p.page)) {
+            seenPages.add(p.page);
+            candidates.push(p);
+        }
+    }
+    console.log(`[${siteConfig.PARAM}] 共 ${pages.length} 页，低分候选 ${candidates.length} 页`);
+
+    if (!canWrite) {
+        candidates.slice(0, 30).forEach((c) => {
+            console.log(`  [扫描] ${c.page} (rating=${c.rating})`);
+        });
+        return { scanned: true, candidates: candidates.length };
+    }
+
+    for (const p of candidates) {
+        const key = `${dedupPrefix}:${siteConfig.PARAM}:${p.page}`;
+        try {
+            const existing = await prisma.setting.findUnique({ where: { key } });
+            if (existing) {
+                console.log(`  [跳过] ${p.page} 已处理过`);
+                continue;
+            }
+        } catch (e) { /* 忽略查询错误 */ }
+
+        try {
+            // 1. 添加「待删除」标签
+            const tagRes = await addTag(baseUrl, p.page, cookie, tag);
+            await sleep(1200);
+
+            // 2. 发布「职员帖：删除宣告」公告（含删除倒计时 iframe）
+            const timerIframe = buildTimerIframe(`${process.env.SITE_ORIGIN || ''}/timer/timer.html`, {
+                deleteScore,
+                countdownHours
+            });
+            const text = buildAnnouncementText({ deleteScore, timerIframe, pageName: p.page });
+            const title = buildAnnouncementTitle();
+            const postRes = await postAnnouncement(baseUrl, p.page, cookie, title, text);
+
+            // 记录处理结果，避免重复
+            const value = JSON.stringify({ page: p.page, rating: p.rating, tag, target: postRes.target, processedAt: Date.now() });
+            await prisma.setting.upsert({
+                where: { key },
+                update: { value },
+                create: { key, value }
+            });
+            console.log(`  [成功] ${p.page} (rating=${p.rating}) 已打标签「${tag}」并发布公告 → ${postRes.target}`);
+        } catch (e) {
+            console.error(`  [失败] ${p.page}: ${e.message}`);
+        }
+        await sleep(1200);
+    }
+    return { scanned: true, candidates: candidates.length };
+}
+
 async function runAutoStaffDeletion() {
     if (isAutoDeleting) {
         console.log(`[${new Date().toLocaleString()}] 自动删帖扫描尚未结束，跳过本次触发。`);
@@ -480,90 +557,20 @@ async function runAutoStaffDeletion() {
         // 机器人凭据：未配置则仅扫描不写操作（安全护栏）
         const botUser = process.env.WIKIDOT_BOT_USER || '';
         const botPass = process.env.WIKIDOT_BOT_PASS || '';
-        let canWrite = !!(botUser && botPass);
         let cookie = null;
-        if (canWrite) {
+        if (botUser && botPass) {
             try {
                 cookie = await login(botUser, botPass);
                 console.log(`[${new Date().toLocaleString()}] 机器人登录成功，将自动执行打标签 + 发公告。`);
             } catch (e) {
                 console.error('机器人登录失败，本次仅扫描:', e.message);
-                canWrite = false;
             }
         } else {
             console.log(`[${new Date().toLocaleString()}] 未配置机器人账号（WIKIDOT_BOT_USER/PASS），本次仅扫描站点。`);
         }
 
         for (const site of activeSites) {
-            const deleteScore = site.AUTO_DELETE_SCORE ?? AUTO_DELETE_DEFAULT_SCORE;
-            const countdownHours = site.AUTO_DELETE_COUNTDOWN_HOURS ?? AUTO_DELETE_COUNTDOWN_HOURS;
-            const tag = site.AUTO_DELETE_TAG || AUTO_DELETE_TAG;
-            const baseUrl = site.URL.replace(/\/$/, '');
-
-            console.log(`[${new Date().toLocaleString()}] 自动扫描站点 [${site.PARAM}]（删除线 ${deleteScore}，倒计时 ${countdownHours}h，标签「${tag}」）...`);
-            let pages;
-            try {
-                pages = await fetchAllSitePages(site);
-            } catch (e) {
-                console.error(`[${site.PARAM}] 拉取页面清单失败: ${e.message}`);
-                continue;
-            }
-
-            // 筛选低分候选（按页面名去重，避免同一页面在不同分类重复）
-            const candidates = [];
-            const seenPages = new Set();
-            for (const p of pages) {
-                if ((p.rating ?? 0) <= deleteScore && !seenPages.has(p.page)) {
-                    seenPages.add(p.page);
-                    candidates.push(p);
-                }
-            }
-            console.log(`[${site.PARAM}] 共 ${pages.length} 页，低分候选 ${candidates.length} 页`);
-
-            if (!canWrite) {
-                candidates.slice(0, 30).forEach((c) => {
-                    console.log(`  [扫描] ${c.page} (rating=${c.rating})`);
-                });
-                continue;
-            }
-
-            for (const p of candidates) {
-                const key = `auto-deletion:v1:${site.PARAM}:${p.page}`;
-                try {
-                    const existing = await prisma.setting.findUnique({ where: { key } });
-                    if (existing) {
-                        console.log(`  [跳过] ${p.page} 已处理过`);
-                        continue;
-                    }
-                } catch (e) { /* 忽略查询错误 */ }
-
-                try {
-                    // 1. 添加「待删除」标签
-                    const tagRes = await addTag(baseUrl, p.page, cookie, tag);
-                    await sleep(1200);
-
-                    // 2. 发布「职员帖：删除宣告」公告（含删除倒计时 iframe）
-                    const timerIframe = buildTimerIframe(`${process.env.SITE_ORIGIN || ''}/timer/timer.html`, {
-                        deleteScore,
-                        countdownHours
-                    });
-                    const text = buildAnnouncementText({ deleteScore, timerIframe, pageName: p.page });
-                    const title = buildAnnouncementTitle();
-                    const postRes = await postAnnouncement(baseUrl, p.page, cookie, title, text);
-
-                    // 记录处理结果，避免重复
-                    const value = JSON.stringify({ page: p.page, rating: p.rating, tag, target: postRes.target, processedAt: Date.now() });
-                    await prisma.setting.upsert({
-                        where: { key },
-                        update: { value },
-                        create: { key, value }
-                    });
-                    console.log(`  [成功] ${p.page} (rating=${p.rating}) 已打标签「${tag}」并发布公告 → ${postRes.target}`);
-                } catch (e) {
-                    console.error(`  [失败] ${p.page}: ${e.message}`);
-                }
-                await sleep(1200);
-            }
+            await scanSiteForDeletion(site, cookie);
         }
         console.log(`[${new Date().toLocaleString()}] 自动删帖扫描结束。`);
     } catch (e) {
@@ -573,8 +580,82 @@ async function runAutoStaffDeletion() {
     }
 }
 
-// 每天凌晨 3 点执行自动删帖扫描（避开每 3 小时全站抓取与凌晨 4 点论坛同步）
+// --- 机器人定时扫描：按每个机器人配置的扫描间隔与指定站点自动扫描 ---
+
+let isBotScanRunning = false;
+
+async function runBotScheduledScans() {
+    if (isBotScanRunning) {
+        console.log(`[${new Date().toLocaleString()}] 机器人扫描仍在进行，跳过本次检查。`);
+        return;
+    }
+    isBotScanRunning = true;
+    const now = Date.now();
+    try {
+        const bots = await prisma.botAccount.findMany({
+            where: { scanInterval: { not: null } }
+        });
+        if (bots.length === 0) return;
+
+        for (const bot of bots) {
+            const interval = bot.scanInterval;
+            if (!interval || interval <= 0) continue;
+
+            // 判断是否到扫描时间（上次扫描 + 间隔）
+            const lastScan = bot.lastScanAt ? new Date(bot.lastScanAt).getTime() : 0;
+            if (lastScan && (now - lastScan) < interval * 60 * 1000) continue;
+
+            // 读取指定扫描站点
+            let sites = [];
+            try { sites = JSON.parse(bot.scanSites || '[]'); } catch (e) { sites = []; }
+            if (!Array.isArray(sites) || sites.length === 0) {
+                console.log(`[${new Date().toLocaleString()}] 机器人「${bot.name}」未指定扫描站点，跳过。`);
+                continue;
+            }
+
+            // 用机器人账号登录
+            let cookie;
+            try {
+                cookie = await login(bot.username, decryptPassword(bot.password));
+            } catch (e) {
+                console.error(`机器人「${bot.name}」登录失败: ${e.message}`);
+                continue;
+            }
+
+            console.log(`[${new Date().toLocaleString()}] 按机器人「${bot.name}」配置开始扫描（间隔 ${interval} 分钟，站点 ${sites.join(', ')}）...`);
+            for (const siteParam of sites) {
+                const siteConfig = config.SUPPORT_WIKI.find((w) => w.PARAM === siteParam);
+                if (!siteConfig) {
+                    console.error(`[${siteParam}] 站点配置不存在，跳过。`);
+                    continue;
+                }
+                await scanSiteForDeletion(siteConfig, cookie, {
+                    dedupPrefix: `auto-deletion:bot:${bot.id}`
+                });
+            }
+
+            // 更新上次扫描时间
+            try {
+                await prisma.botAccount.update({
+                    where: { id: bot.id },
+                    data: { lastScanAt: new Date() }
+                });
+            } catch (e) { /* 忽略 */ }
+            console.log(`[${new Date().toLocaleString()}] 机器人「${bot.name}」扫描完成。`);
+        }
+    } catch (e) {
+        console.error(`机器人定时扫描异常: ${e.message}`);
+    } finally {
+        isBotScanRunning = false;
+    }
+}
+
+// 每天凌晨 3 点执行全局自动删帖扫描（服务器默认 Bot，未配置则仅扫描）
 cron.schedule('0 3 * * *', () => runAutoStaffDeletion());
 runAutoStaffDeletion();
+
+// 每 10 分钟检查一次机器人定时扫描配置（按间隔与指定站点执行）
+cron.schedule('*/10 * * * *', () => runBotScheduledScans());
+runBotScheduledScans();
 
 cron.schedule('0 4 * * *', () => runForumSync());
