@@ -85,12 +85,27 @@ const StaffPostDeletion = () => {
         setAuthChecked(true);
     }, []);
 
-    // 登录后加载我的机器人列表
+    // 登录后加载我的机器人列表，并恢复上次选中的机器人
     useEffect(() => {
         if (!isLoggedIn) return;
         fetch('/api/tools/bot-accounts')
             .then((r) => r.json())
-            .then((d) => { if (d.success) setBots(d.bots || []); })
+            .then((d) => {
+                if (!d.success) return;
+                setBots(d.bots || []);
+                // 恢复上次选中的机器人（持久化在 localStorage，退出页面后仍保持）
+                const savedId = parseInt(window.localStorage.getItem('spd_selected_bot') || '', 10);
+                if (savedId) {
+                    const savedBot = (d.bots || []).find((b) => b.id === savedId);
+                    if (savedBot) {
+                        setSelectedBotId(savedBot.id);
+                        setBotUsername(savedBot.username);
+                        setBotPassword('');
+                    } else {
+                        window.localStorage.removeItem('spd_selected_bot');
+                    }
+                }
+            })
             .catch(() => {});
     }, [isLoggedIn]);
 
@@ -224,6 +239,7 @@ const StaffPostDeletion = () => {
                 setSelectedBotId(null);
                 setBotUsername('');
                 setBotPassword('');
+                window.localStorage.removeItem('spd_selected_bot');
             }
             setBotMsg('机器人已删除');
             await loadBots();
@@ -236,6 +252,8 @@ const StaffPostDeletion = () => {
         setSelectedBotId(bot.id);
         setBotUsername(bot.username);
         setBotPassword('');
+        // 持久化选中状态，退出页面后依然保持
+        window.localStorage.setItem('spd_selected_bot', String(bot.id));
         setBotMsg(`已选用机器人「${bot.name}」，密码将安全地从服务器读取`);
     };
 
