@@ -1,10 +1,12 @@
 import { withAuth } from '../../../utils/withAuth';
+import prisma from '../../../lib/prisma';
 import {
     buildTimerIframe,
     buildAnnouncementText,
     buildAnnouncementTitle,
     parsePageName
 } from '../../../utils/staffPostDeletion';
+import { decryptPassword } from '../../../utils/botAccountCrypto';
 const { login, addTag, postAnnouncement, sleep } = require('../../../utils/wikidotStaffActions');
 const config = require('../../../wikitdb.config.js');
 
@@ -16,6 +18,7 @@ async function handler(req, res) {
     const {
         site,
         pages,
+        botAccountId,
         botUsername,
         botPassword,
         deleteScore,
@@ -34,10 +37,31 @@ async function handler(req, res) {
         return res.status(400).json({ error: '请至少提供一个页面' });
     }
 
-    const username = (botUsername || '').trim() || process.env.WIKIDOT_BOT_USER || '';
-    const password = (botPassword || '') || process.env.WIKIDOT_BOT_PASS || '';
+    // 凭据解析：优先使用已保存的机器人（botAccountId），否则用表单填写的账号密码，最后回退服务器默认 Bot
+    let username = (botUsername || '').trim();
+    let password = botPassword || '';
+    let botLabel = username || '';
+
+    if (botAccountId) {
+        const botId = parseInt(botAccountId, 10);
+        if (!botId) return res.status(400).json({ error: '机器人 ID 无效' });
+        try {
+            const bot = await prisma.botAccount.findUnique({ where: { id: botId } });
+            if (!bot || bot.createdBy !== req.user.username) {
+                return res.status(403).json({ error: '机器人不存在或无权使用' });
+            }
+            username = bot.username;
+            password = decryptPassword(bot.password);
+            botLabel = `${bot.name} (${bot.username})`;
+        } catch (e) {
+            return res.status(400).json({ error: e.message || '读取机器人账号失败' });
+        }
+    }
+
+    username = username || process.env.WIKIDOT_BOT_USER || '';
+    password = password || process.env.WIKIDOT_BOT_PASS || '';
     if (!username || !password) {
-        return res.status(400).json({ error: '请填写机器人账号和密码（或确认服务器已配置默认 Bot）' });
+        return res.status(400).json({ error: '请选择已保存的机器人、填写账号密码，或确认服务器已配置默认 Bot' });
     }
 
     const baseUrl = siteConfig.URL.replace(/\/$/, '');
@@ -55,7 +79,7 @@ async function handler(req, res) {
     try {
         cookie = await login(username, password);
     } catch (e) {
-        return res.status(400).json({ error: e.message });
+        return res.status(400).json({ error: `机器人(${botLabel || username})登录失败: ${e.message}` });
     }
 
     const results = [];

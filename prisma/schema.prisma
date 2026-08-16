@@ -90,6 +90,19 @@ model Setting {
   @@map("settings")
 }
 
+model BotAccount {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(50)
+  username  String   @db.VarChar(100)
+  password  String   @db.Text
+  createdBy String   @db.VarChar(50)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdBy])
+  @@map("bot_accounts")
+}
+
 model TempReg {
   username   String   @id @db.VarChar(20)
   verifyCode String   @unique @db.VarChar(32)

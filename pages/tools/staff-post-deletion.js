@@ -26,11 +26,27 @@ const StaffPostDeletion = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [results, setResults] = useState(null);
+    // 我的机器人列表
+    const [bots, setBots] = useState([]);
+    const [selectedBotId, setSelectedBotId] = useState(null);
+    const [botName, setBotName] = useState('');
+    const [botNewUsername, setBotNewUsername] = useState('');
+    const [botNewPassword, setBotNewPassword] = useState('');
+    const [botMsg, setBotMsg] = useState('');
 
     useEffect(() => {
         setIsLoggedIn(!!window.localStorage.getItem('username'));
         setAuthChecked(true);
     }, []);
+
+    // 登录后加载我的机器人列表
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        fetch('/api/tools/bot-accounts')
+            .then((r) => r.json())
+            .then((d) => { if (d.success) setBots(d.bots || []); })
+            .catch(() => {});
+    }, [isLoggedIn]);
 
     const timerBaseUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/timer/timer.html`
@@ -59,11 +75,74 @@ const StaffPostDeletion = () => {
 
     const pageList = pagesText.split('\n').map((l) => l.trim()).filter(Boolean);
 
+    // --- 我的机器人管理 ---
+    const loadBots = async () => {
+        try {
+            const res = await fetch('/api/tools/bot-accounts');
+            const d = await res.json();
+            if (d.success) setBots(d.bots || []);
+        } catch (e) { /* 忽略 */ }
+    };
+
+    const createBot = async () => {
+        setBotMsg('');
+        if (!botName.trim() || !botNewUsername.trim() || !botNewPassword) {
+            setBotMsg('请填写机器人名称、账号和密码');
+            return;
+        }
+        try {
+            const res = await fetch('/api/tools/bot-accounts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: botName, username: botNewUsername, password: botNewPassword })
+            });
+            const d = await res.json();
+            if (!res.ok) { setBotMsg(d.error || '创建失败'); return; }
+            setBotMsg(`机器人「${d.bot.name}」已创建`);
+            setBotName('');
+            setBotNewUsername('');
+            setBotNewPassword('');
+            await loadBots();
+        } catch (e) {
+            setBotMsg('创建失败：' + e.message);
+        }
+    };
+
+    const deleteBot = async (id) => {
+        if (!window.confirm('确定删除该机器人？删除后不可恢复。')) return;
+        setBotMsg('');
+        try {
+            const res = await fetch('/api/tools/bot-accounts', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            const d = await res.json();
+            if (!d.success) { setBotMsg(d.error || '删除失败'); return; }
+            if (selectedBotId === id) {
+                setSelectedBotId(null);
+                setBotUsername('');
+                setBotPassword('');
+            }
+            setBotMsg('机器人已删除');
+            await loadBots();
+        } catch (e) {
+            setBotMsg('删除失败：' + e.message);
+        }
+    };
+
+    const useBot = (bot) => {
+        setSelectedBotId(bot.id);
+        setBotUsername(bot.username);
+        setBotPassword('');
+        setBotMsg(`已选用机器人「${bot.name}」，密码将安全地从服务器读取`);
+    };
+
     const handleSubmit = async () => {
         setError('');
         setResults(null);
         if (!site) return setError('请选择站点');
-        if (!botUsername || !botPassword) return setError('请填写机器人账号和密码（留空则使用服务器默认 Bot 配置）');
+        if (!selectedBotId && !botUsername) return setError('请选择机器人或填写机器人账号');
         if (pageList.length === 0) return setError('请至少输入一个页面');
         if (!timerIframe.trim()) return setError('请先生成计时器代码');
 
@@ -75,6 +154,7 @@ const StaffPostDeletion = () => {
                 body: JSON.stringify({
                     site,
                     pages: pageList,
+                    botAccountId: selectedBotId,
                     botUsername,
                     botPassword,
                     deleteScore,
@@ -148,6 +228,74 @@ const StaffPostDeletion = () => {
                         <i className="fa-solid fa-circle-exclamation mr-2"></i>{error}
                     </div>
                 )}
+
+                <div className="bg-gray-800/50 rounded-xl p-6 border border-white/10 space-y-4 mb-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                            <i className="fa-solid fa-robot text-indigo-400"></i> 我的机器人
+                        </h2>
+                        <span className="text-xs text-gray-500">在此创建的机器人会进入列表，可直接选用</span>
+                    </div>
+
+                    {botMsg && (
+                        <div className="p-3 rounded-lg bg-indigo-900/20 border border-indigo-500/30 text-indigo-300 text-sm">{botMsg}</div>
+                    )}
+
+                    {bots.length > 0 && (
+                        <div className="space-y-2">
+                            {bots.map((bot) => (
+                                <div key={bot.id}
+                                    className={`flex items-center justify-between gap-3 p-3 rounded-lg border text-sm ${selectedBotId === bot.id ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-gray-900/40 border-gray-700/40'}`}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <i className="fa-solid fa-robot text-gray-500"></i>
+                                        <div className="min-w-0">
+                                            <div className="text-gray-200 font-medium truncate">{bot.name}</div>
+                                            <div className="text-xs text-gray-500 truncate">{bot.username} · 创建于 {new Date(bot.createdAt).toLocaleString('zh-CN', { hour12: false })}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button onClick={() => useBot(bot)}
+                                            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30'}`}>
+                                            {selectedBotId === bot.id ? '✓ 使用中' : '使用'}
+                                        </button>
+                                        <button onClick={() => deleteBot(bot.id)}
+                                            className="px-3 py-1.5 rounded text-xs font-medium bg-red-600/20 text-red-400 border border-red-500/30 hover:bg-red-600/30 transition-colors">
+                                            <i className="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {bots.length === 0 && (
+                        <div className="p-4 rounded-lg bg-gray-900/40 border border-gray-700/40 text-center text-gray-500 text-sm">
+                            还没有机器人，创建后即可在下方列表中选择使用
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <input type="text" value={botName} onChange={(e) => setBotName(e.target.value)}
+                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
+                                placeholder="机器人名称" />
+                        </div>
+                        <div>
+                            <input type="text" value={botNewUsername} onChange={(e) => setBotNewUsername(e.target.value)}
+                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
+                                placeholder="Wikidot 账号" />
+                        </div>
+                        <div>
+                            <input type="password" value={botNewPassword} onChange={(e) => setBotNewPassword(e.target.value)}
+                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
+                                placeholder="Wikidot 密码" />
+                        </div>
+                    </div>
+                    <button onClick={createBot}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+                        <i className="fa-solid fa-plus mr-1.5"></i>创建机器人
+                    </button>
+                </div>
 
                 <div className="bg-gray-800/50 rounded-xl p-6 border border-white/10 space-y-4 mb-6">
                     <div>
