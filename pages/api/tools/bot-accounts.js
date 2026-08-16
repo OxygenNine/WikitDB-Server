@@ -1,6 +1,6 @@
 import prisma from '../../../lib/prisma';
 import { withAuth } from '../../../utils/withAuth';
-import { encryptPassword } from '../../../utils/botAccountCrypto';
+import { encryptPassword, encryptData } from '../../../utils/botAccountCrypto';
 
 // 密码字段绝不回显
 const PUBLIC_SELECT = {
@@ -29,15 +29,19 @@ async function handler(req, res) {
             const bots = await prisma.botAccount.findMany({
                 where: { createdBy: req.user.username },
                 orderBy: { createdAt: 'desc' },
-                select: PUBLIC_SELECT
+                select: { ...PUBLIC_SELECT, sessionCookie: true }
             });
-            // scanSites 从 JSON 字符串解析为数组返回
-            const safe = bots.map((b) => ({
-                ...b,
-                scanSites: (() => {
-                    try { return JSON.parse(b.scanSites || '[]'); } catch { return []; }
-                })()
-            }));
+            // scanSites 从 JSON 字符串解析为数组返回；sessionCookie 不回显，仅标记是否已配置
+            const safe = bots.map((b) => {
+                const { sessionCookie, ...rest } = b;
+                return {
+                    ...rest,
+                    hasSession: !!sessionCookie,
+                    scanSites: (() => {
+                        try { return JSON.parse(b.scanSites || '[]'); } catch { return []; }
+                    })()
+                };
+            });
             return res.status(200).json({ success: true, bots: safe });
         } catch (e) {
             console.error('查询机器人失败:', e.message);
@@ -78,9 +82,9 @@ async function handler(req, res) {
         }
     }
 
-    // PUT：编辑机器人（名称 / 扫描间隔 / 指定站点 / 删除线 / 倒计时时间），仅创建者可编辑
+    // PUT：编辑机器人（名称 / 扫描间隔 / 指定站点 / 删除线 / 倒计时时间 / 会话Cookie），仅创建者可编辑
     if (req.method === 'PUT') {
-        const { id, name, scanInterval, scanSites, deleteScore, countdownHours } = req.body || {};
+        const { id, name, scanInterval, scanSites, deleteScore, countdownHours, sessionCookie } = req.body || {};
         const botId = parseInt(id, 10);
         if (!botId) return res.status(400).json({ error: '缺少机器人 ID' });
 
@@ -103,7 +107,9 @@ async function handler(req, res) {
                     scanInterval: interval > 0 ? interval : null,
                     scanSites: sites.length > 0 ? JSON.stringify(sites) : null,
                     deleteScore: Number.isNaN(score) ? null : score,
-                    countdownHours: Number.isNaN(hours) || hours <= 0 ? null : hours
+                    countdownHours: Number.isNaN(hours) || hours <= 0 ? null : hours,
+                    // 手动会话 Cookie：传入则更新（加密存储），传空字符串则清除
+                    ...(typeof sessionCookie === 'string' ? { sessionCookie: sessionCookie.trim() ? encryptData(sessionCookie.trim()) : null } : {})
                 },
                 select: PUBLIC_SELECT
             });

@@ -46,6 +46,7 @@ const StaffPostDeletion = () => {
     const [editSites, setEditSites] = useState([]);
     const [editDeleteScore, setEditDeleteScore] = useState(-5);
     const [editCountdownHours, setEditCountdownHours] = useState(72);
+    const [editSessionCookie, setEditSessionCookie] = useState('');
 
     // 扫描间隔可选项：值（分钟）
     const SCAN_INTERVAL_OPTIONS = [
@@ -195,6 +196,7 @@ const StaffPostDeletion = () => {
         setEditSites(Array.isArray(bot.scanSites) ? bot.scanSites : []);
         setEditDeleteScore(bot.deleteScore ?? -5);
         setEditCountdownHours(bot.countdownHours ?? 72);
+        setEditSessionCookie('');
     };
 
     const cancelEditBot = () => {
@@ -213,7 +215,7 @@ const StaffPostDeletion = () => {
             const res = await fetch('/api/tools/bot-accounts', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: editingBot.id, name: editName, scanInterval: editInterval, scanSites: editSites, deleteScore: editDeleteScore, countdownHours: editCountdownHours })
+                body: JSON.stringify({ id: editingBot.id, name: editName, scanInterval: editInterval, scanSites: editSites, deleteScore: editDeleteScore, countdownHours: editCountdownHours, sessionCookie: editSessionCookie })
             });
             const d = await res.json();
             if (!res.ok) { setBotMsg(d.error || '保存失败'); return; }
@@ -394,6 +396,7 @@ const StaffPostDeletion = () => {
                                         <span><i className="fa-solid fa-globe mr-1"></i>站点：{(Array.isArray(bot.scanSites) && bot.scanSites.length ? bot.scanSites.map(siteName).join('、') : '未指定')}</span>
                                         <span><i className="fa-solid fa-scale-balanced mr-1"></i>删除线：{bot.deleteScore ?? -5}</span>
                                         <span><i className="fa-solid fa-hourglass-half mr-1"></i>倒计时：{bot.countdownHours ?? 72} 小时</span>
+                                        <span>{bot.hasSession ? <span className="text-green-400"><i className="fa-solid fa-key mr-1"></i>会话已配置</span> : <span className="text-amber-400"><i className="fa-solid fa-key mr-1"></i>未配会话</span>}</span>
                                         <span><i className="fa-solid fa-history mr-1"></i>上次扫描：{bot.lastScanAt ? formatBotDate(bot.lastScanAt) : '从未'}</span>
                                         <span><i className="fa-solid fa-calendar mr-1"></i>创建：{formatBotDate(bot.createdAt)}</span>
                                     </div>
@@ -455,6 +458,14 @@ const StaffPostDeletion = () => {
                                     <input type="number" min="1" value={editCountdownHours} onChange={(e) => setEditCountdownHours(parseInt(e.target.value, 10) || 72)}
                                         className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5" />
                                 </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs text-gray-400 mb-1">
+                                    Wikidot 会话 Cookie（可选，强烈建议）{editingBot && editingBot.hasSession ? <span className="text-green-400">· 已配置</span> : <span className="text-amber-400">· 未配置</span>}
+                                </label>
+                                <textarea value={editSessionCookie} onChange={(e) => setEditSessionCookie(e.target.value)} rows={3}
+                                    className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-2.5 font-mono"
+                                    placeholder={'在浏览器登录该机器人账号后，复制 WIKIDOT_SESSION_ID 的值（形如 a1b2c3d4e5...），粘贴到此处。配置后自动扫描/发帖将直接使用该会话，避免频繁登录触发限制。留空保持不变。'} />
                             </div>
                             <div className="flex gap-2">
                                 <button type="button" onClick={saveEditBot}
