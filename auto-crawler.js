@@ -8,7 +8,7 @@ const config = require('./wikitdb.config.js');
 const { fetchCategories, fetchThreads, fetchPosts } = require('./utils/wikidotForum');
 const { getGraphQLEndpoint } = require('./utils/graphql');
 const { buildTimerIframe, buildAnnouncementText, buildAnnouncementTitle } = require('./utils/staffPostDeletion');
-const { login, addTag, postAnnouncement } = require('./utils/wikidotStaffActions');
+const { login, addTag, postAnnouncement, buildHeaders } = require('./utils/wikidotStaffActions');
 const { decryptPassword } = require('./utils/botAccountCrypto');
 
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 });
@@ -511,6 +511,24 @@ async function scanSiteForDeletion(siteConfig, cookie, opts = {}) {
             }
         } catch (e) { /* 忽略查询错误 */ }
 
+        // 验证页面真实存在：Wikit 数据可能滞后（含已删除页面），404 则标记跳过，避免反复失败
+        try {
+            const checkRes = await axios.get(`${baseUrl}/${encodeURIComponent(p.page)}`, {
+                headers: buildHeaders(cookie),
+                timeout: 20000,
+                maxRedirects: 5,
+                validateStatus: (s) => s >= 200 && s < 400
+            });
+        } catch (e) {
+            const nfValue = JSON.stringify({ page: p.page, rating: p.rating, status: 'notfound', processedAt: Date.now() });
+            try {
+                await prisma.setting.upsert({ where: { key }, update: { value: nfValue }, create: { key, value: nfValue } });
+            } catch (e2) { /* 忽略 */ }
+            console.log(`  [跳过] ${p.page} 页面不存在（可能已删除）`);
+            await sleep(1200);
+            continue;
+        }
+
         try {
             // 1. 添加「待删除」标签
             const tagRes = await addTag(baseUrl, p.page, cookie, tag);
@@ -535,6 +553,15 @@ async function scanSiteForDeletion(siteConfig, cookie, opts = {}) {
             console.log(`  [成功] ${p.page} (rating=${p.rating}) 已打标签「${tag}」并发布公告 → ${postRes.target}`);
         } catch (e) {
             console.error(`  [失败] ${p.page}: ${e.message}`);
+            // 记录失败状态，避免对同一页面反复重试
+            const failValue = JSON.stringify({
+                page: p.page, rating: p.rating, tag,
+                status: 'failed', error: String(e.message || '').slice(0, 200),
+                processedAt: Date.now()
+            });
+            try {
+                await prisma.setting.upsert({ where: { key }, update: { value: failValue }, create: { key, value: failValue } });
+            } catch (e2) { /* 忽略 */ }
         }
         await sleep(1200);
     }
