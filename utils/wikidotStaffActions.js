@@ -51,11 +51,12 @@ function extractToken(html) {
 }
 
 /**
- * 给页面添加标签（通过 Wikidot 标签编辑页）
+ * 给页面添加标签（通过 Wikidot 编辑页 /{page}/edit）
  * @returns {Promise<{tags: string[], httpStatus: number}>}
  */
 async function addTag(baseUrl, pageName, cookie, tagName) {
-    const editUrl = `${baseUrl}/page/edittags/${encodeURIComponent(pageName)}`;
+    // Wikidot 编辑页正确 URL：/{page}/edit（/page/edittags/ 不存在）
+    const editUrl = `${baseUrl}/${encodeURIComponent(pageName)}/edit`;
     const getRes = await axios.get(editUrl, {
         headers: buildHeaders(cookie),
         timeout: 20000,
@@ -63,29 +64,54 @@ async function addTag(baseUrl, pageName, cookie, tagName) {
         validateStatus: (s) => s >= 200 && s < 400
     });
     const $ = cheerio.load(getRes.data);
+
+    // 无编辑权限时 Wikidot 返回普通页面（无编辑表单）
+    const hasEditForm = $('#edit-page-form').length > 0
+        || $('textarea[name="source"]').length > 0
+        || $('input[name="wikidot_token7"]').length > 0;
+    if (!hasEditForm) {
+        throw new Error(`无编辑权限：机器人账号不是该站点成员，或站点禁止编辑「${pageName}」`);
+    }
+
     const token = extractToken(getRes.data);
 
+    // 读取现有标签（编辑表单 tags 字段，逗号分隔）
     let existing = [];
-    $('#edit-tags-form textarea[name="tags"]').each((_, el) => {
+    $('#edit-page-form textarea[name="tags"], #edit-page-form input[name="tags"]').each((_, el) => {
         existing = String($(el).val() || '').split(',').map((t) => t.trim()).filter(Boolean);
     });
+    // 若表单结构不同，退回从页面标签链接解析
     if (existing.length === 0) {
-        $('.page-tags a, .page-tags span').each((_, el) => {
+        $('.page-tags a').each((_, el) => {
             const text = $(el).text().trim();
             if (text) existing.push(text);
         });
     }
-    // 去重合并
+    // 去重合并新标签
     const merged = existing.filter((t, i) => existing.indexOf(t) === i);
     const normalized = tagName ? String(tagName).trim() : '';
     if (normalized && !merged.includes(normalized)) merged.push(normalized);
 
-    const postRes = await axios.post(editUrl, new URLSearchParams({
-        wikidot_token7: token,
-        tags: merged.join(', ')
-    }).toString(), {
+    // 提取编辑表单全部字段（source/title/lock 等），覆盖 tags
+    const formFields = {};
+    $('#edit-page-form input[name], #edit-page-form textarea[name], #edit-page-form select[name]').each((_, el) => {
+        const name = $(el).attr('name');
+        if (name) formFields[name] = String($(el).val() || '');
+    });
+
+    const params = {
+        ...formFields,
+        tags: merged.join(', '),
+        action: 'WikiPageAction',
+        event: 'savePage',
+        mode: 'page',
+        page_unix_name: pageName,
+        wikidot_token7: token
+    };
+
+    const postRes = await axios.post(editUrl, new URLSearchParams(params).toString(), {
         headers: { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' },
-        timeout: 20000,
+        timeout: 30000,
         maxRedirects: 5,
         validateStatus: (s) => s >= 200 && s < 400
     });
