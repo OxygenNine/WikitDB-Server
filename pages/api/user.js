@@ -30,6 +30,12 @@ export default async function handler(req, res) {
         if (isSelf) {
             response.balance = user.balance !== null ? Number(user.balance) : 10000;
             response.isAdmin = user.isAdmin;
+            response.isStaff = !!user.isStaff;
+            try {
+                response.staffSites = user.staffSites ? JSON.parse(user.staffSites) : [];
+            } catch (e) {
+                response.staffSites = [];
+            }
         }
 
         res.status(200).json(response);

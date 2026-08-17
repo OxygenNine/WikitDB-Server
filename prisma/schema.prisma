@@ -15,6 +15,8 @@ model User {
   balance        Decimal  @default(10000) @db.Decimal(12, 2)
   wikidotAccount String?
   isAdmin        Boolean  @default(false)
+  isStaff        Boolean  @default(false) // 是否职员（可进入职员面板审核代发）
+  staffSites     String?  @db.Text       // 职员负责的站点 PARAM 数组（JSON 字符串）
   status         String   @default("active") @db.VarChar(10)
   createdAt      DateTime @default(now())
 
@@ -22,6 +24,7 @@ model User {
   gachas       Gacha[]
   images       Image[]
   bountyClaims BountyClaim[]
+  proxyPosts   ProxyPost[]
 
   @@map("users")
 }
@@ -197,4 +200,32 @@ model ForumPost {
   @@unique([siteParam, postId])
   @@index([siteParam, threadId])
   @@map("forum_posts")
+}
+
+model ProxyPost {
+  id           Int      @id @default(autoincrement())
+  userId       Int      // 提交人（本站用户）
+  username     String   @db.VarChar(20)
+  site         String   @db.VarChar(50) // 目标站点 PARAM
+  siteName     String   @default("") @db.VarChar(100)
+  page         String   @db.VarChar(200)
+  title        String   @default("")
+  source       String   @db.Text
+  comments     String?  @db.Text
+  status       String   @default("pending") @db.VarChar(20) // pending/approved/rejected/sent/failed
+  reviewNote   String?  @db.Text
+  reviewedBy   String?  @db.VarChar(20)
+  reviewedAt   DateTime?
+  botAccountId Int?
+  botLabel     String?  @db.VarChar(100)
+  sendResult   String?  @db.Text
+  sentAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([site])
+  @@index([userId])
+  @@map("proxy_posts")
 }

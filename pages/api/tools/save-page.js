@@ -1,58 +1,50 @@
-import axios from 'axios';
+import prisma from '../../../lib/prisma';
 import { withAuth } from '../../../utils/withAuth';
 const config = require('../../../wikitdb.config.js');
-
-const SAVE_PAGE_URL = 'https://wikit.unitreaty.org/wikidot/savepage';
 
 async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: '仅支持 POST' });
     }
 
-    const { site, username, password, page, title, source, comments, token } = req.body;
-
-    const finalUsername = username || '';
-    const finalPassword = password || '';
+    const { site, page, title, source, comments } = req.body;
 
     if (!site) return res.status(400).json({ error: '请选择站点' });
-    if (!finalUsername || !finalPassword) return res.status(400).json({ error: '请填写 Wikidot 账号和密码' });
-    if (!page) return res.status(400).json({ error: '请填写页面名称' });
-    if (!source) return res.status(400).json({ error: '页面内容不能为空' });
-    if (!token) return res.status(400).json({ error: '请填写授权 Token' });
+    if (!page || !String(page).trim()) return res.status(400).json({ error: '请填写页面名称' });
+    if (!source || !String(source).trim()) return res.status(400).json({ error: '页面内容不能为空' });
 
     const wikiConfig = config.SUPPORT_WIKI.find(w => w.PARAM === site);
     if (!wikiConfig) return res.status(400).json({ error: '未找到对应站点配置' });
 
-    const wikiName = wikiConfig.WIKIT_ID;
+    const pageName = String(page).trim().slice(0, 200);
+    const pageTitle = String(title || '').trim().slice(0, 200);
+    const pageSource = String(source);
+    const pageComments = String(comments || '').trim().slice(0, 2000) || null;
 
     try {
-        const payload = new URLSearchParams();
-        payload.append('token', token);
-        payload.append('wiki', wikiName);
-        payload.append('username', finalUsername);
-        payload.append('password', finalPassword);
-        payload.append('page', page);
-        payload.append('title', title || '');
-        payload.append('source', source);
-        payload.append('comments', comments || '');
-
-        const r = await axios.post(SAVE_PAGE_URL, payload.toString(), {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000,
-            validateStatus: () => true
+        // 创建代发审核单，等待职员在 /staff-panel 审核通过后由机器人发送
+        const post = await prisma.proxyPost.create({
+            data: {
+                userId: req.user.id,
+                username: req.user.username,
+                site,
+                siteName: wikiConfig.NAME || site,
+                page: pageName,
+                title: pageTitle,
+                source: pageSource,
+                comments: pageComments,
+                status: 'pending'
+            }
         });
 
-        const data = r.data;
-        if (r.status === 200 && (data === 'ok' || (typeof data === 'object' && (data.status === 'ok' || data.status === 'success')))) {
-            const pageName = data.page || page;
-            return res.status(200).json({ success: true, message: `页面 ${pageName} 发布成功` });
-        }
-
-        const errMsg = typeof data === 'string' ? data : JSON.stringify(data);
-        return res.status(200).json({ success: false, error: errMsg || '发布失败', statusCode: r.status });
+        return res.status(200).json({
+            success: true,
+            requestId: post.id,
+            message: `已提交审核（单号 #${post.id}），审核通过后由职员登记的机器人代发至 ${wikiConfig.NAME}`
+        });
     } catch (error) {
-        console.error('Save page error:', error.message);
-        return res.status(500).json({ error: '发布服务异常，请稍后重试' });
+        console.error('Create proxy post error:', error.message);
+        return res.status(500).json({ error: '提交审核失败，请稍后重试' });
     }
 }
 

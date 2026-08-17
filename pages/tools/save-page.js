@@ -6,9 +6,6 @@ const config = require('../../wikitdb.config.js');
 export default function SavePage() {
     const wikis = config.SUPPORT_WIKI || [];
     const [site, setSite] = useState('');
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [token, setToken] = useState('');
     const [page, setPage] = useState('');
     const [title, setTitle] = useState('');
     const [source, setSource] = useState('');
@@ -21,8 +18,6 @@ export default function SavePage() {
         setError('');
         setSuccess('');
         if (!site) return setError('请选择站点');
-        if (!username || !password) return setError('请填写账号和密码');
-        if (!token) return setError('请填写授权 Token');
         if (!page) return setError('请填写页面名称');
         if (!source) return setError('请填写页面内容');
         setLoading(true);
@@ -30,14 +25,14 @@ export default function SavePage() {
             const r = await fetch('/api/tools/save-page', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ site, username, password, token, page, title, source, comments })
+                body: JSON.stringify({ site, page, title, source, comments })
             });
             const d = await r.json();
             if (!r.ok) throw new Error(d.error);
             if (d.success) {
                 setSuccess(d.message);
             } else {
-                setError(d.error || '发布失败');
+                setError(d.error || '提交审核失败');
             }
         } catch (e) {
             setError(e.message);
@@ -75,26 +70,6 @@ export default function SavePage() {
                             ))}
                         </select>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">授权 Token</label>
-                        <input type="password" value={token} onChange={e => setToken(e.target.value)}
-                            className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
-                            placeholder="Wikit API 授权 Token" />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Wikidot 账号</label>
-                            <input type="text" value={username} onChange={e => setUsername(e.target.value)}
-                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
-                                placeholder="留空则使用默认 Bot 账号" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">密码</label>
-                            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                                className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
-                                placeholder="留空则使用默认 Bot 密码" />
-                        </div>
-                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-300 mb-1">页面名称</label>
@@ -121,9 +96,13 @@ export default function SavePage() {
                             className="w-full bg-gray-900 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5"
                             placeholder="可选，如：初次创建" />
                     </div>
+                    <div className="rounded-lg bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-xs text-indigo-300 leading-relaxed">
+                        <i className="fa-solid fa-circle-info mr-1"></i>
+                        提交后进入<strong>职员审核队列</strong>，审核通过后由职员登记的机器人代发，无需填写 Token 或账号密码。
+                    </div>
                     <button onClick={handleSubmit} disabled={loading}
                         className="w-full px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 text-white text-sm font-bold rounded-lg transition-colors">
-                        {loading ? '发布中...' : '发布页面'}
+                        {loading ? '提交中...' : '提交审核'}
                     </button>
                 </div>
             </div>

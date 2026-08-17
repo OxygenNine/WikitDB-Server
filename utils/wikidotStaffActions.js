@@ -254,6 +254,113 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
     return { categoryId, threadId, target: label, httpStatus: postRes.status };
 }
 
+/**
+ * 用已登录的机器人会话保存/创建页面（代发审核通过后调用）
+ * 流程：GET 编辑页取 wikidot_token7 与表单 → 提交编辑表单（title/source/comments）
+ * 兼容新页面（/{page}/edit 对不存在页面同样返回空表单）与已存在页面。
+ * @param {string} baseUrl 站点首页（如 https://rule-wiki.wikidot.com）
+ * @param {string} pageName 页面名（unix name）
+ * @param {string} cookie 登录会话 Cookie（由 login() 获取）
+ * @param {{title?: string, source: string, comments?: string}} data
+ * @returns {Promise<{ok: boolean, httpStatus: number, pageUrl: string}>}
+ */
+async function savePage(baseUrl, pageName, cookie, { title, source, comments }) {
+    if (!source || !String(source).trim()) throw new Error('页面内容不能为空');
+
+    const encodedName = encodeURIComponent(String(pageName).trim());
+    const editUrl = `${baseUrl}/${encodedName}/edit`;
+    const pageUrl = `${baseUrl}/${encodedName}`;
+
+    // 1. 获取编辑表单（页面级 token）
+    const formRes = await axios.get(editUrl, {
+        headers: buildHeaders(cookie),
+        timeout: 25000,
+        maxRedirects: 5,
+        validateStatus: (s) => s >= 200 && s < 400
+    });
+    const html = String(formRes.data);
+    const token = extractToken(html);
+    const pageIdMatch = String(html).match(/WIKIREQUEST\.info\.pageId\s*=\s*(\d+)/);
+    const pageId = pageIdMatch ? pageIdMatch[1] : '';
+
+    const hasForm = html.includes('edit-page-form') || html.includes('name="source"') || html.includes('PageEditModule');
+    if (!hasForm) {
+        throw new Error('未获取到编辑表单（机器人可能没有该站点的编辑权限）');
+    }
+
+    // 2. 提交保存：优先 AJAX 连接器（与 saveTags / savePost 同一机制），失败再回退表单 POST
+    const ajaxUrl = `${baseUrl}/ajax-module-connector.php`;
+    const ajaxParams = new URLSearchParams({
+        action: 'WikiPageAction',
+        event: 'savePage',
+        title: title || '',
+        source,
+        comments: comments || '',
+        wikidot_token7: token
+    });
+    if (pageId) ajaxParams.append('pageId', pageId);
+    else ajaxParams.append('page_unix_name', String(pageName).trim());
+
+    const lastErr = [];
+    try {
+        const ajaxRes = await axios.post(ajaxUrl, ajaxParams.toString(), {
+            headers: { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 30000,
+            maxRedirects: 5,
+            validateStatus: (s) => s >= 200 && s < 400
+        });
+        const data = ajaxRes.data;
+        const body = typeof data === 'string' ? data : JSON.stringify(data || '');
+        if (data && typeof data === 'object' && data.status && data.status !== 'ok') {
+            throw new Error(`保存页面失败: ${data.message || data.status}`);
+        }
+        if (/error|错误|没有权限|权限不足/i.test(body) && body.length < 2000) {
+            lastErr.push(`AJAX 响应异常: ${body.slice(0, 160)}`);
+        } else {
+            return { ok: true, httpStatus: ajaxRes.status, pageUrl };
+        }
+    } catch (e) {
+        lastErr.push(e.message);
+    }
+
+    // 回退：按浏览器方式将编辑表单 POST 到编辑页 URL
+    try {
+        const $ = cheerio.load(html);
+        const formAction = ($('#edit-page-form').attr('action') || '').trim() || editUrl;
+        const actionUrl = /^https?:\/\//.test(formAction) ? formAction : `${baseUrl}${formAction.startsWith('/') ? formAction : '/' + formAction}`;
+
+        const formData = new URLSearchParams();
+        $('#edit-page-form input[type="hidden"]').each((_, el) => {
+            const name = $(el).attr('name');
+            const value = $(el).attr('value') || '';
+            if (name && !['title', 'source', 'comments'].includes(name)) formData.append(name, value);
+        });
+        formData.set('title', title || '');
+        formData.set('source', source);
+        formData.set('comments', comments || '');
+        if (!formData.get('wikidot_token7')) formData.set('wikidot_token7', token);
+
+        const formRes2 = await axios.post(actionUrl, formData.toString(), {
+            headers: { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded', 'Referer': editUrl },
+            timeout: 30000,
+            maxRedirects: 5,
+            validateStatus: (s) => s >= 200 && s < 400
+        });
+        const body2 = typeof formRes2.data === 'string' ? formRes2.data : JSON.stringify(formRes2.data || '');
+        if (formRes2.status >= 300 && formRes2.status < 400) {
+            return { ok: true, httpStatus: formRes2.status, pageUrl };
+        }
+        if (formRes2.status === 200 && !/error|错误|没有权限|权限不足/i.test(body2)) {
+            return { ok: true, httpStatus: 200, pageUrl };
+        }
+        lastErr.push(`表单提交异常: ${body2.slice(0, 160)}`);
+    } catch (e) {
+        lastErr.push(e.message);
+    }
+
+    throw new Error(`保存页面失败：${lastErr.join('；')}`);
+}
+
 module.exports = {
     login,
     clearLoginCache,
@@ -263,5 +370,6 @@ module.exports = {
     addTag,
     findDiscussion,
     postAnnouncement,
+    savePage,
     sleep
 };

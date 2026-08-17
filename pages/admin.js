@@ -54,6 +54,9 @@ export default function AdminDashboard() {
     const [fileLogs, setFileLogs] = useState({ lines: [], totalLines: 0 });
     const [fileLogKey, setFileLogKey] = useState('crawler');
     const [fileLogLoading, setFileLogLoading] = useState(false);
+    const [staffMsg, setStaffMsg] = useState(null);
+    const [staffEditing, setStaffEditing] = useState(null);
+    const [staffEditSites, setStaffEditSites] = useState([]);
     const authHeaders = () => {
         const h = { 'Content-Type': 'application/json' };
         if (typeof localStorage !== 'undefined') {
@@ -209,6 +212,31 @@ export default function AdminDashboard() {
             setSiteMsg({ type: 'ok', text: `站点 "${param}" 已删除` });
         } catch (e) {
             setSiteMsg({ type: 'error', text: e.error || '删除站点失败' });
+        }
+    };
+
+    const handleSetStaff = async () => {
+        if (!staffEditing) return;
+        if (!staffEditSites.length) { setStaffMsg({ type: 'error', text: '请至少选择一个负责站点' }); return; }
+        try {
+            const d = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ targetUser: staffEditing, action: 'set_staff', staffSites: staffEditSites }) });
+            setStaffMsg({ type: 'ok', text: d.message || '已设置' });
+            setStaffEditing(null);
+            setStaffEditSites([]);
+            refreshUsers();
+        } catch (e) {
+            setStaffMsg({ type: 'error', text: e.error || '设置失败' });
+        }
+    };
+
+    const handleUnsetStaff = async (username) => {
+        if (!confirm(`确定取消用户 ${username} 的职员身份？`)) return;
+        try {
+            const d = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ targetUser: username, action: 'unset_staff' }) });
+            setStaffMsg({ type: 'ok', text: d.message || '已取消' });
+            refreshUsers();
+        } catch (e) {
+            setStaffMsg({ type: 'error', text: e.error || '操作失败' });
         }
     };
 
@@ -571,6 +599,39 @@ export default function AdminDashboard() {
                                 <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索用户名..."
                                     className={inputLgCls} />
                             </div>
+
+                            {staffMsg && (
+                                <div className={`rounded-md border px-3 py-2 text-sm ${staffMsg.type === 'ok' ? 'border-emerald-800 bg-emerald-950 text-emerald-300' : 'border-red-800 bg-red-950 text-red-300'}`}>
+                                    {staffMsg.text}
+                                </div>
+                            )}
+
+                            {staffEditing && (
+                                <div className={cardCls + ' space-y-3'}>
+                                    <div className="text-sm font-medium text-neutral-200">
+                                        设为职员：{staffEditing}
+                                        <span className="ml-2 text-xs text-neutral-500">选择其负责的站点（可多选）</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {config.SUPPORT_WIKI.map(w => (
+                                            <button key={w.PARAM} onClick={() => setStaffEditSites(p => p.includes(w.PARAM) ? p.filter(x => x !== w.PARAM) : [...p, w.PARAM])}
+                                                className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                                                    staffEditSites.includes(w.PARAM)
+                                                        ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300'
+                                                        : 'border-neutral-700 bg-neutral-900 text-neutral-400 hover:text-neutral-200'
+                                                }`}>
+                                                {w.NAME} ({w.PARAM})
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={handleSetStaff} className={btnPrimary}>确认设为职员</button>
+                                        <button onClick={() => { setStaffEditing(null); setStaffEditSites([]); }} className={btnGhost}>取消</button>
+                                        {staffEditSites.length === 0 && <span className="text-xs text-neutral-500">请至少选择一个站点</span>}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-neutral-800">
@@ -579,6 +640,7 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">用户名</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">余额</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">角色</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">职员</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-400">操作</th>
                                             </tr>
                                         </thead>
@@ -588,8 +650,23 @@ export default function AdminDashboard() {
                                                     <td className="px-4 py-2.5 text-sm text-neutral-200">{u.username}</td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{u.balance?.toLocaleString()}</td>
                                                     <td className="px-4 py-2.5 text-sm">{u.isAdmin ? <span className="rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-xs text-amber-400">管理员</span> : <span className="text-neutral-500">用户</span>}</td>
+                                                    <td className="px-4 py-2.5 text-sm">
+                                                        {u.isStaff ? (
+                                                            <div>
+                                                                <span className="rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-xs text-emerald-400">职员</span>
+                                                                <div className="mt-0.5 text-[10px] text-neutral-500">{(u.staffSites || []).join('、')}</div>
+                                                            </div>
+                                                        ) : <span className="text-neutral-600">-</span>}
+                                                    </td>
                                                     <td className="px-4 py-2.5 text-right">
-                                                        <button onClick={() => { setInspectTarget(u.username); handleInspect(); }} className={btnGhost}>查看</button>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button onClick={() => { setInspectTarget(u.username); handleInspect(); }} className={btnGhost}>查看</button>
+                                                            {u.isStaff ? (
+                                                                <button onClick={() => handleUnsetStaff(u.username)} className={btnGhost + ' !text-red-400 hover:!border-red-500/50'}>取消职员</button>
+                                                            ) : (
+                                                                <button onClick={() => { setStaffEditing(u.username); setStaffEditSites(u.staffSites || []); setStaffMsg(null); }} className={btnGhost + ' !text-emerald-400 hover:!border-emerald-500/50'}>设为职员</button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}

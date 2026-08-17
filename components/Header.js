@@ -14,6 +14,7 @@ const HighDefLogoSVG = ({ className }) => (
 const Header = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [username, setUsername] = useState(null);
+    const [isStaff, setIsStaff] = useState(false);
     const [broadcastMsg, setBroadcastMsg] = useState('');
 
     useEffect(() => {
@@ -21,6 +22,15 @@ const Header = () => {
         if (storedUsername) {
             setUsername(storedUsername);
         }
+
+        fetch('/api/user', { credentials: 'include' })
+            .then(res => res.json())
+            .then(me => {
+                if (me && (me.isStaff || me.isAdmin)) {
+                    setIsStaff(true);
+                }
+            })
+            .catch(() => {});
 
         fetch('/api/admin/broadcast')
             .then(res => res.json())
@@ -93,6 +103,11 @@ const Header = () => {
                                     <a href="/tools" className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors">
                                         <i className="fa-solid fa-toolbox"></i> 工具
                                     </a>
+                                    {isStaff && (
+                                        <a href="/staff-panel" className="rounded-md px-3 py-2 text-sm font-medium text-emerald-500 hover:bg-emerald-500/10 transition-colors">
+                                            <i className="fa-solid fa-user-shield"></i> 职员面板
+                                        </a>
+                                    )}
                                     <a href="/forums" className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors">
                                         <i className="fa-solid fa-comments"></i> 论坛
                                     </a>
@@ -137,6 +152,11 @@ const Header = () => {
                             <a href="/tools" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
                                 <i className="fa-solid fa-toolbox"></i> 工具
                             </a>
+                            {isStaff && (
+                                <a href="/staff-panel" className="rounded-md px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
+                                    <i className="fa-solid fa-user-shield"></i> 职员面板
+                                </a>
+                            )}
                             <a href="/forums" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
                                 <i className="fa-solid fa-comments"></i> 论坛
                             </a>
