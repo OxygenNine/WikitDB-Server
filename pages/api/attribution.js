@@ -55,7 +55,8 @@ async function handler(req, res) {
         }
 
         // 站点维度：归属 + 分数 + 页面评分
-        const [attributions, scoreRecord, pageScoreRecord] = await Promise.all([
+        const [attributionCount, attributions, scoreRecord, pageScoreRecord] = await Promise.all([
+            prisma.authorAttribution.count({ where: { siteParam: site } }),
             prisma.authorAttribution.findMany({
                 where: { siteParam: site },
                 orderBy: { page: 'asc' },
@@ -72,7 +73,7 @@ async function handler(req, res) {
             site,
             siteName: siteConfig.NAME,
             attributionPage: siteConfig.ATTRIBUTION_PAGE || null,
-            attributionCount: attributions.length,
+            attributionCount,
             authorCount: Object.keys(authorScores).length,
             authorScores,
             pageScores,
