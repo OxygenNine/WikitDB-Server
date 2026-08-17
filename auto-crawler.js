@@ -7,6 +7,8 @@ const { spawn } = require('child_process');
 const prisma = require('./lib/prisma');
 const config = require('./wikitdb.config.js');
 const { buildBackupArgs, getWikiName } = require('./utils/wikitBackup');
+const fs = require('fs');
+const path = require('path');
 
 const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 10 });
 const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 10 });
@@ -17,6 +19,60 @@ const request = axios.create({
 });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const CRAWLER_LOG_FILE = path.join(process.cwd(), 'crawler.log');
+
+/** 同时输出到控制台和 crawler.log，方便管理后台查看 */
+function logLine(...args) {
+    const line = args.map(String).join(' ');
+    console.log(line);
+    try {
+        fs.appendFileSync(CRAWLER_LOG_FILE, `[${new Date().toLocaleString()}] ${line}\n`, 'utf8');
+    } catch (e) { /* 日志文件写入失败不影响主流程 */ }
+}
+
+const CRAWLER_STATUS_KEY = 'crawler:status';
+
+let crawlStatus = {
+    running: false,
+    startedAt: null,
+    finishedAt: null,
+    currentSite: null,
+    currentStage: '',
+    overall: { totalSites: 0, doneSites: 0 },
+    sites: [],
+    lastRun: null
+};
+
+/** 将当前爬取状态持久化到数据库（管理后台 /api/admin/crawler-status 读取） */
+async function persistCrawlStatus() {
+    try {
+        await prisma.setting.upsert({
+            where: { key: CRAWLER_STATUS_KEY },
+            update: { value: JSON.stringify(crawlStatus) },
+            create: { key: CRAWLER_STATUS_KEY, value: JSON.stringify(crawlStatus) }
+        });
+    } catch (e) {
+        console.error(`[crawler-status] 状态持久化失败: ${e.message}`);
+    }
+}
+
+function buildSiteStatus(siteConfig) {
+    return {
+        param: siteConfig.PARAM,
+        name: siteConfig.NAME,
+        status: 'pending',
+        pagesFound: 0,
+        pagesProcessed: 0,
+        votes: 0,
+        discussions: 0,
+        errors: 0,
+        startedAt: null,
+        finishedAt: null,
+        lastRun: crawlStatus.lastRun,
+        error: null
+    };
+}
 
 let botCookieCache = null;
 
@@ -57,7 +113,7 @@ let isRunning = false;
 
 async function runCrawler() {
     if (isRunning) {
-        console.log(`[${new Date().toLocaleString()}] 警告：上一轮爬虫尚未结束，跳过本次触发。`);
+        logLine(`[${new Date().toLocaleString()}] 警告：上一轮爬虫尚未结束，跳过本次触发。`);
         return;
     }
     isRunning = true;
@@ -67,11 +123,33 @@ async function runCrawler() {
         const baseHeaders = { 'User-Agent': 'Mozilla/5.0' };
         if (botCookie) baseHeaders['Cookie'] = botCookie;
 
-        console.log(`\n[${new Date().toLocaleString()}] 开始执行全站数据(评分+讨论区)爬取...`);
+        logLine(`\n[${new Date().toLocaleString()}] 开始执行全站数据(评分+讨论区)爬取...`);
+        crawlStatus = {
+            running: true,
+            startedAt: Date.now(),
+            finishedAt: null,
+            currentSite: null,
+            currentStage: '',
+            overall: { totalSites: config.SUPPORT_WIKI.length, doneSites: 0 },
+            sites: config.SUPPORT_WIKI.map(buildSiteStatus),
+            lastRun: crawlStatus.lastRun
+        };
+        await persistCrawlStatus();
         for (const siteConfig of config.SUPPORT_WIKI) {
             const wikiParam = siteConfig.PARAM;
             const actualWikiName = siteConfig.URL.replace(/^https?:\/\//i, '').split('.')[0];
             const baseUrl = siteConfig.URL.replace(/\/$/, '');
+
+            let siteVotes = 0, siteDiscussions = 0, siteErrors = 0;
+            let siteStatus = crawlStatus.sites.find(s => s.param === wikiParam);
+            if (siteStatus) {
+                siteStatus.status = 'running';
+                siteStatus.startedAt = Date.now();
+                siteStatus.error = null;
+                crawlStatus.currentSite = wikiParam;
+                crawlStatus.currentStage = 'list';
+                await persistCrawlStatus();
+            }
 
             let allPages = [];
             let pageNum = 1;
@@ -102,7 +180,7 @@ async function runCrawler() {
                             }
                         }
                     });
-                    console.log(`成功 ${countThisPage} 篇`);
+                    logLine(`成功 ${countThisPage} 篇`);
                     if (pageNum >= totalPages) hasMore = false;
                     else pageNum++;
                 } catch (e) {
@@ -110,6 +188,12 @@ async function runCrawler() {
                 }
                 await sleep(1000);
             }
+
+            if (siteStatus) {
+                siteStatus.pagesFound = allPages.length;
+                crawlStatus.currentStage = 'crawl';
+            }
+            await persistCrawlStatus();
 
             let userVotesMap = {};
             let count = 0;
@@ -144,6 +228,7 @@ async function runCrawler() {
                             const cacheKey = `forum_v7:${wikiParam}:${pageNode.page}`;
 
                             if (threadId) {
+                                siteDiscussions++;
                                 try {
                                     const forumUrl = `${baseUrl}/forum/t-${threadId}`;
                                     const { data: forumHtml } = await request.get(forumUrl, { headers: baseHeaders });
@@ -283,19 +368,28 @@ async function runCrawler() {
                                     if (textAfter.includes('-')) vote = '-1';
                                     if (!userVotesMap[user]) userVotesMap[user] = [];
                                     userVotesMap[user].push({ wiki: wikiParam, page: pageNode.page, title: pageNode.title, vote: vote, author: pageNode.author, date: Date.now() });
+                                    siteVotes++;
                                 });
                             }
                             success = true;
                         } catch (err) {
+                            siteErrors++;
                             if (attempt < 3) await sleep(2000);
                         }
                     }
                 }));
 
                 count += batch.length;
-                console.log(`--- 当前进度: [${count}/${allPages.length}] ---`);
+                logLine(`--- 当前进度: [${count}/${allPages.length}] ---`);
 
                 if (count % 100 === 0 || count >= allPages.length) {
+                    if (siteStatus) {
+                        siteStatus.pagesProcessed = count;
+                        siteStatus.votes = siteVotes;
+                        siteStatus.discussions = siteDiscussions;
+                        siteStatus.errors = siteErrors;
+                        await persistCrawlStatus();
+                    }
                     for (const [user, newVotes] of Object.entries(userVotesMap)) {
                         const key = `user_votes_${user.toLowerCase().replace(/_/g, '-').replace(/ /g, '-')}`;
                         const record = await prisma.setting.findUnique({ where: { key } });
@@ -328,11 +422,39 @@ async function runCrawler() {
                 }
                 await sleep(2500);
             }
+
+            if (siteStatus) {
+                siteStatus.status = 'done';
+                siteStatus.finishedAt = Date.now();
+                siteStatus.lastRun = Date.now();
+                siteStatus.pagesProcessed = count;
+                siteStatus.votes = siteVotes;
+                siteStatus.discussions = siteDiscussions;
+                siteStatus.errors = siteErrors;
+                crawlStatus.overall.doneSites = crawlStatus.sites.filter(s => s.status === 'done').length;
+                crawlStatus.currentSite = null;
+                crawlStatus.currentStage = 'done';
+                await persistCrawlStatus();
+            }
         }
     } catch (e) {
-        console.error(`发生异常: ${e.message}`);
+        logLine(`发生异常: ${e.message}`);
+        crawlStatus.sites.forEach(s => {
+            if (s.status === 'running') {
+                s.status = 'error';
+                s.error = e.message;
+            }
+        });
+        await persistCrawlStatus();
     } finally {
         isRunning = false;
+        crawlStatus.running = false;
+        crawlStatus.finishedAt = Date.now();
+        crawlStatus.lastRun = Date.now();
+        crawlStatus.currentSite = null;
+        crawlStatus.currentStage = '';
+        crawlStatus.overall.doneSites = crawlStatus.sites.filter(s => s.status === 'done').length;
+        await persistCrawlStatus();
     }
 }
 
@@ -343,19 +465,19 @@ let isBackupRunning = false;
 
 async function runWikitBackup() {
     if (isBackupRunning) {
-        console.log(`[${new Date().toLocaleString()}] Wikit backup is already running; skipping.`);
+        logLine(`[${new Date().toLocaleString()}] Wikit backup is already running; skipping.`);
         return;
     }
 
     const wikiNames = config.SUPPORT_WIKI.map(getWikiName).filter(Boolean);
     if (wikiNames.length === 0) {
-        console.error(`[${new Date().toLocaleString()}] No valid wikis configured for backup.`);
+        logLine(`[${new Date().toLocaleString()}] No valid wikis configured for backup.`);
         return;
     }
 
     isBackupRunning = true;
     const args = buildBackupArgs({ wikiNames, keepRemoved: true });
-    console.log(`[${new Date().toLocaleString()}] Starting wikit backup for ${wikiNames.length} wikis.`);
+    logLine(`[${new Date().toLocaleString()}] Starting wikit backup for ${wikiNames.length} wikis.`);
 
     await new Promise((resolve) => {
         const child = spawn('wikit', args, {
@@ -369,10 +491,10 @@ async function runWikitBackup() {
         child.stdout.on('data', (chunk) => process.stdout.write(`[wikit] ${chunk}`));
         child.stderr.on('data', (chunk) => process.stderr.write(`[wikit] ${chunk}`));
         child.on('error', (error) => {
-            console.error(`[${new Date().toLocaleString()}] Failed to start wikit: ${error.message}`);
+            logLine(`[${new Date().toLocaleString()}] Failed to start wikit: ${error.message}`);
         });
         child.on('close', (code) => {
-            console.log(`[${new Date().toLocaleString()}] Wikit backup finished with exit code ${code}.`);
+            logLine(`[${new Date().toLocaleString()}] Wikit backup finished with exit code ${code}.`);
             resolve();
         });
     });
