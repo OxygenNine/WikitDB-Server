@@ -49,7 +49,8 @@ function buildConfigFileContent(config) {
     lines.push('            ImgURL: "Logo链接",');
     lines.push('            PARAM: "简写",');
     lines.push('            WIKIT_ID: "Wikit站点里写的站点名称，这里用于筛选作者的站点页面",');
-    lines.push('            GQL_API: "可选，自定义GraphQL端点，不填则默认 https://wikit.unitreaty.org/apiv1/graphql"');
+    lines.push('            GQL_API: "可选，自定义GraphQL端点，不填则默认 https://wikit.unitreaty.org/apiv1/graphql",');
+    lines.push('            ATTRIBUTION_PAGE: "可选，站点归属资料页面路径（如 attribution-metadata），爬虫抓取其作者归属与分数分配",');
     lines.push('        },');
     lines.push('        */');
     for (const site of config.SUPPORT_WIKI || []) {
@@ -111,6 +112,13 @@ function validateSite(input) {
         site.GQL_API = gql;
     }
     if (input.AUTHOR_TAG) site.AUTHOR_TAG = String(input.AUTHOR_TAG).trim();
+    if (input.ATTRIBUTION_PAGE) {
+        const attrPage = String(input.ATTRIBUTION_PAGE).trim().slice(0, 100);
+        if (!/^[A-Za-z0-9_.:-]{1,100}$/.test(attrPage)) {
+            return { error: '归属资料页面 (ATTRIBUTION_PAGE) 只能包含字母、数字、点、下划线、冒号和连字符' };
+        }
+        site.ATTRIBUTION_PAGE = attrPage;
+    }
     if (input.FORUM_SYNC === true || input.FORUM_SYNC === 'true') site.FORUM_SYNC = true;
 
     return { site };

@@ -45,7 +45,7 @@ export default function AdminDashboard() {
     const [honeypotLogs, setHoneypotLogs] = useState([]);
     const [overviewStats, setOverviewStats] = useState(null);
     const [sites, setSites] = useState([]);
-    const [siteForm, setSiteForm] = useState({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', FORUM_SYNC: false });
+    const [siteForm, setSiteForm] = useState({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
     const [siteMsg, setSiteMsg] = useState(null);
     const [savingSite, setSavingSite] = useState(false);
     const [crawlerStatus, setCrawlerStatus] = useState(null);
@@ -196,7 +196,7 @@ export default function AdminDashboard() {
             const d = await api('/api/admin/sites', { method: 'POST', body: JSON.stringify(siteForm) });
             setSites(d.sites || []);
             setSiteMsg({ type: 'ok', text: '站点已添加，配置已写入 wikitdb.config.js' });
-            setSiteForm({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', FORUM_SYNC: false });
+            setSiteForm({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
         } catch (e) {
             setSiteMsg({ type: 'error', text: e.error || '添加站点失败' });
         } finally {
@@ -429,6 +429,7 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">链接</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">PARAM</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">WIKIT_ID</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">归属页</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">论坛同步</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">操作</th>
                                             </tr>
@@ -447,6 +448,7 @@ export default function AdminDashboard() {
                                                     </td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{site.PARAM}</td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{site.WIKIT_ID}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{site.ATTRIBUTION_PAGE ? <span className="font-mono text-xs text-indigo-400">{site.ATTRIBUTION_PAGE}</span> : '-'}</td>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300">{site.FORUM_SYNC ? '是' : '否'}</td>
                                                     <td className="px-4 py-2.5 text-sm">
                                                         <button onClick={() => handleDeleteSite(site.PARAM)} className={btnDanger}>删除</button>
@@ -469,6 +471,7 @@ export default function AdminDashboard() {
                                     <input value={siteForm.ImgURL} onChange={e => setSiteForm(p => ({ ...p, ImgURL: e.target.value }))} placeholder="Logo 链接（可选）" className={inputLgCls} />
                                     <input value={siteForm.GQL_API} onChange={e => setSiteForm(p => ({ ...p, GQL_API: e.target.value }))} placeholder="GQL_API 端点（可选，默认 wikit 官方）" className={inputLgCls} />
                                     <input value={siteForm.AUTHOR_TAG} onChange={e => setSiteForm(p => ({ ...p, AUTHOR_TAG: e.target.value }))} placeholder="作者标签（可选，默认 作者）" className={inputLgCls} />
+                                    <input value={siteForm.ATTRIBUTION_PAGE} onChange={e => setSiteForm(p => ({ ...p, ATTRIBUTION_PAGE: e.target.value }))} placeholder="归属资料页面（可选，如 attribution-metadata）" className={inputLgCls} />
                                     <label className="flex items-center gap-2 text-sm text-neutral-300">
                                         <input type="checkbox" checked={!!siteForm.FORUM_SYNC} onChange={e => setSiteForm(p => ({ ...p, FORUM_SYNC: e.target.checked }))} className="h-4 w-4 rounded border-neutral-700 bg-neutral-950" />
                                         启用论坛同步 (FORUM_SYNC)

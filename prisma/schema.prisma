@@ -229,3 +229,20 @@ model ProxyPost {
   @@index([userId])
   @@map("proxy_posts")
 }
+
+model AuthorAttribution {
+  id        Int      @id @default(autoincrement())
+  siteParam String   @db.VarChar(50) // 站点 PARAM
+  page      String   @db.VarChar(200) // 页面名（含类目前缀）
+  username  String   @db.VarChar(100) // 作者用户名
+  type      String   @default("作者") @db.VarChar(20) // 作者/重写/翻译/维护者
+  date      String   @default("") @db.VarChar(10)    // YYYY-MM-DD（可空）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([siteParam, page, username, type, date])
+  @@index([siteParam])
+  @@index([username])
+  @@index([page])
+  @@map("author_attributions")
+}
