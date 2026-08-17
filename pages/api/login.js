@@ -55,7 +55,9 @@ async function handler(req, res) {
 
         const token = signToken({ username: user.username, id: user.id });
 
-        res.setHeader('Set-Cookie', serializeAuthCookie(token));
+        // Secure cookie 仅在 HTTPS 下启用：站点为 HTTP 时若强制 Secure，浏览器会拒绝发送，导致会话丢失
+        const isHttps = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+        res.setHeader('Set-Cookie', serializeAuthCookie(token, { secure: isHttps }));
 
         res.status(200).json({
             message: '登录成功',
