@@ -6,7 +6,11 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const LOGIN_URL = 'https://www.wikidot.com/default--flow/login__LoginPopupScreen';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// 注意：实测发现 Wikidot 会基于 UA 做反滥用判定。
+// 完整 Chrome UA（含 (KHTML, like Gecko) Chrome/xx）对 edit/PageEditModule 返回 no_permission，
+// 而中段 UA（Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36）可正常访问。
+// 故全库统一使用中段 UA（与 login() 一致），避免被识别为机器人。
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
