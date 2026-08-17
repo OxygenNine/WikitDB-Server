@@ -299,10 +299,13 @@ async function savePage(baseUrl, pageName, cookie, { title, source, comments }) 
         const pageIdMatch = String(editorData.body || '').match(/name="page_id"\s*value="(\d+)"/);
         pageId = pageIdMatch ? pageIdMatch[1] : '';
     } else {
-        const msg = (editorData && typeof editorData === 'object')
+        const rawMsg = (editorData && typeof editorData === 'object')
             ? (editorData.message || editorData.status || JSON.stringify(editorData).slice(0, 200))
             : (typeof editorData === 'string' ? editorData : JSON.stringify(editorData || ''));
-        throw new Error(`无法获取编辑权限：${msg || '页面不存在或机器人无编辑权限'}`);
+        const sessionHint = /登入为 Wikidot 用户|不能在此分类/.test(rawMsg)
+            ? '（机器人会话可能已失效或被限流，系统会自动重试）'
+            : '';
+        throw new Error(`无法获取编辑权限：${rawMsg || '页面不存在或机器人无编辑权限'}${sessionHint}`);
     }
     if (!lockId || !lockSecret) {
         throw new Error('无法获取编辑锁（机器人可能没有该站点的编辑权限）');

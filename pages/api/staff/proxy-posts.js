@@ -149,15 +149,20 @@ async function handler(req, res) {
                         });
                     };
 
-                    let result;
-                    try {
-                        result = await attemptSend();
-                    } catch (firstErr) {
-                        // 会话可能因缓存过期失效，清缓存重登后重试一次
-                        clearLoginCache();
-                        await sleep(3000);
-                        result = await attemptSend();
+                    // Wikidot 存在间歇性会话失效/限流：最多尝试 3 次，每次清缓存重登 + 递增退避
+                    let result = null;
+                    let lastErr = null;
+                    for (let attempt = 0; attempt < 3; attempt++) {
+                        try {
+                            result = await attemptSend();
+                            break;
+                        } catch (e) {
+                            lastErr = e;
+                            clearLoginCache();
+                            await sleep(5000 * (attempt + 1)); // 5s / 10s / 15s
+                        }
                     }
+                    if (!result) throw lastErr || new Error('发送失败');
 
                     const updated = await prisma.proxyPost.update({
                         where: { id: postId },
