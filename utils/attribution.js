@@ -91,14 +91,14 @@ function aggregateAuthorScores(attributions, pageRatings) {
 
     for (const [pageKey, users] of Object.entries(pageUsers)) {
         const rating = pageRatings && pageRatings.get(pageKey) ? pageRatings.get(pageKey).rating || 0 : 0;
-        const share = users.length ? rating / users.length : 0;
 
+        // 分数分配规则：每个登记归属的用户都获得该页面的全部分数（无论作者人数）
         for (const user of users) {
             const uk = String(user).toLowerCase();
             if (!result[uk]) {
                 result[uk] = { name: user, score: 0, pages: 0, average: 0, pageNames: [] };
             }
-            result[uk].score += share;
+            result[uk].score += rating;
             result[uk].pages += 1;
             result[uk].pageNames.push(pageKey);
         }
