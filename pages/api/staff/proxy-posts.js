@@ -1,7 +1,7 @@
 import prisma from '../../../lib/prisma';
 import { withStaff } from '../../../utils/withStaff';
 import { decryptPassword } from '../../../utils/botAccountCrypto';
-import { login, savePage } from '../../../utils/wikidotStaffActions';
+import { login, clearLoginCache, sleep, savePage } from '../../../utils/wikidotStaffActions';
 const config = require('../../../wikitdb.config.js');
 
 function parseSites(sites) {
@@ -140,12 +140,24 @@ async function handler(req, res) {
 
                 try {
                     const password = decryptPassword(bot.password);
-                    const cookie = await login(bot.username, password);
-                    const result = await savePage(baseUrl, post.page, cookie, {
-                        title: post.title,
-                        source: post.source,
-                        comments: post.comments
-                    });
+                    const attemptSend = async () => {
+                        const cookie = await login(bot.username, password);
+                        return savePage(baseUrl, post.page, cookie, {
+                            title: post.title,
+                            source: post.source,
+                            comments: post.comments
+                        });
+                    };
+
+                    let result;
+                    try {
+                        result = await attemptSend();
+                    } catch (firstErr) {
+                        // 会话可能因缓存过期失效，清缓存重登后重试一次
+                        clearLoginCache();
+                        await sleep(3000);
+                        result = await attemptSend();
+                    }
 
                     const updated = await prisma.proxyPost.update({
                         where: { id: postId },
