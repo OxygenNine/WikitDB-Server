@@ -256,9 +256,11 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
 
 /**
  * 用已登录的机器人会话保存/创建页面（代发审核通过后调用）
- * 已实测：直接调用 ajax-module-connector.php 的 WikiPageAction/savePage 事件即可，
- * 参数 page_unix_name + title + source + comments + wikidot_token7（cookie 里的真实 token），
- * 新建与编辑均兼容。不再依赖 /{page}/edit 编辑表单（该 URL 对部分站点不返回表单）。
+ * 已实测通过的两步协议：
+ *   1) POST ajax-module-connector.php?moduleName=edit/PageEditModule&mode=page&wiki_page=<页面名>
+ *      → 响应顶层返回 lock_id / lock_secret（新建与编辑均适用）
+ *   2) POST action=WikiPageAction&event=savePage&mode=page&wiki_page=<页面名>
+ *      &lock_id&lock_secret&page_id(已存在时)&title&source&comments&wikidot_token7
  * @param {string} baseUrl 站点首页（如 https://rule-wiki.wikidot.com）
  * @param {string} pageName 页面名（unix name）
  * @param {string} cookie 登录会话 Cookie（由 login() 获取）
@@ -271,81 +273,66 @@ async function savePage(baseUrl, pageName, cookie, { title, source, comments }) 
     const cleanName = String(pageName).trim();
     const pageUrl = `${baseUrl}/${encodeURIComponent(cleanName)}`;
     const ajaxUrl = `${baseUrl}/ajax-module-connector.php`;
-    const cookieToken = extractToken7(cookie);
-    const lastErr = [];
+    const token7 = extractToken7(cookie);
+    const headers = { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' };
+    const post = (params) => axios.post(ajaxUrl, new URLSearchParams(params).toString(), {
+        headers,
+        timeout: 30000,
+        maxRedirects: 5,
+        validateStatus: (s) => s >= 200 && s < 400
+    });
 
-    /** 单次 AJAX 提交 */
-    async function ajaxSubmit(token7) {
-        const params = new URLSearchParams({
-            action: 'WikiPageAction',
-            event: 'savePage',
-            page_unix_name: cleanName,
-            title: title || '',
-            source,
-            comments: comments || '',
-            wikidot_token7: token7
-        });
-        return axios.post(ajaxUrl, params.toString(), {
-            headers: { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' },
-            timeout: 30000,
-            maxRedirects: 5,
-            validateStatus: (s) => s >= 200 && s < 400
-        });
+    // 步骤 1：加载编辑器，获取编辑锁
+    let lockId = null;
+    let lockSecret = null;
+    let pageId = '';
+    const editorRes = await post({
+        moduleName: 'edit/PageEditModule',
+        mode: 'page',
+        wiki_page: cleanName,
+        wikidot_token7: token7
+    });
+    const editorData = editorRes.data;
+    if (editorData && typeof editorData === 'object' && editorData.status === 'ok') {
+        lockId = editorData.lock_id;
+        lockSecret = editorData.lock_secret;
+        const pageIdMatch = String(editorData.body || '').match(/name="page_id"\s*value="(\d+)"/);
+        pageId = pageIdMatch ? pageIdMatch[1] : '';
+    } else {
+        const msg = (editorData && typeof editorData === 'object')
+            ? (editorData.message || editorData.status || JSON.stringify(editorData).slice(0, 200))
+            : (typeof editorData === 'string' ? editorData : JSON.stringify(editorData || ''));
+        throw new Error(`无法获取编辑权限：${msg || '页面不存在或机器人无编辑权限'}`);
+    }
+    if (!lockId || !lockSecret) {
+        throw new Error('无法获取编辑锁（机器人可能没有该站点的编辑权限）');
     }
 
-    /** 解析响应，成功返回 detail，失败抛错 */
-    function handle(data, tag) {
-        if (data && typeof data === 'object') {
-            if (data.status === 'ok') return data;
-            if (data.status === 'try_again' && data.time_to_wait) {
-                throw new Error(`${tag} 保存需等待 ${data.time_to_wait}s 后重试`);
-            }
-            throw new Error(`${tag} ${data.message || data.status || JSON.stringify(data).slice(0, 160)}`);
-        }
-        const body = typeof data === 'string' ? data : JSON.stringify(data || '');
-        throw new Error(`${tag} ${body.slice(0, 200)}`);
-    }
+    // 步骤 2：带锁保存
+    const saveParams = {
+        moduleName: 'Empty',
+        action: 'WikiPageAction',
+        event: 'savePage',
+        mode: 'page',
+        wiki_page: cleanName,
+        lock_id: lockId,
+        lock_secret: lockSecret,
+        title: title || '',
+        source,
+        comments: comments || '',
+        wikidot_token7: token7
+    };
+    if (pageId) saveParams.page_id = pageId;
 
-    // 策略 1：cookie 中的 wikidot_token7（实测有效）
-    try {
-        const res = await ajaxSubmit(cookieToken);
-        const detail = handle(res.data, '');
-        return { ok: true, httpStatus: res.status, pageUrl, detail };
-    } catch (e) {
-        // lock 冲突（try_again）时等待后重试一次
-        if (/等待 \d+s/.test(e.message)) {
-            const wait = parseInt((e.message.match(/等待 (\d+)s/) || [])[1] || '3', 10);
-            await sleep((wait + 1) * 1000);
-            try {
-                const res2 = await ajaxSubmit(cookieToken);
-                const detail2 = handle(res2.data, '');
-                return { ok: true, httpStatus: res2.status, pageUrl, detail: detail2 };
-            } catch (e2) {
-                lastErr.push(e2.message);
-            }
-        } else {
-            lastErr.push(e.message);
-        }
+    const saveRes = await post(saveParams);
+    const data = saveRes.data;
+    if (data && typeof data === 'object' && data.status === 'ok') {
+        return { ok: true, httpStatus: saveRes.status, pageUrl, detail: data };
     }
-
-    // 策略 2：从目标页面 HTML 提取页面级 token 重试（cookie token 失效时）
-    try {
-        const pageRes = await axios.get(pageUrl, {
-            headers: buildHeaders(cookie),
-            timeout: 25000,
-            maxRedirects: 5,
-            validateStatus: (s) => s >= 200 && s < 500
-        });
-        const html = String(pageRes.data);
-        const pageToken = extractToken(html) || cookieToken;
-        const res2 = await ajaxSubmit(pageToken);
-        const detail2 = handle(res2.data, '页面级 token ');
-        return { ok: true, httpStatus: res2.status, pageUrl, detail: detail2 };
-    } catch (e) {
-        lastErr.push(e.message);
-    }
-
-    throw new Error(`保存页面失败：${lastErr.join('；')}`);
+    const errMsg = (data && typeof data === 'object')
+        ? (data.message || data.status || JSON.stringify(data).slice(0, 200))
+        : (typeof data === 'string' ? data : JSON.stringify(data || ''));
+    throw new Error(`保存失败：${errMsg}`);
 }
 
 module.exports = {
