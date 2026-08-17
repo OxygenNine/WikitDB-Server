@@ -48,6 +48,7 @@ export default function AdminDashboard() {
     const [siteForm, setSiteForm] = useState({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
     const [siteMsg, setSiteMsg] = useState(null);
     const [savingSite, setSavingSite] = useState(false);
+    const [editingSiteParam, setEditingSiteParam] = useState(null);
     const [crawlerStatus, setCrawlerStatus] = useState(null);
     const [crawlerSites, setCrawlerSites] = useState([]);
     const [crawlerLoading, setCrawlerLoading] = useState(false);
@@ -193,15 +194,43 @@ export default function AdminDashboard() {
         setSavingSite(true);
         setSiteMsg(null);
         try {
-            const d = await api('/api/admin/sites', { method: 'POST', body: JSON.stringify(siteForm) });
+            const isEdit = !!editingSiteParam;
+            const d = await api('/api/admin/sites', {
+                method: isEdit ? 'PUT' : 'POST',
+                body: JSON.stringify(isEdit ? { param: editingSiteParam, ...siteForm } : siteForm)
+            });
             setSites(d.sites || []);
-            setSiteMsg({ type: 'ok', text: '站点已添加，配置已写入 wikitdb.config.js' });
+            setSiteMsg({ type: 'ok', text: isEdit ? (d.message || '站点已更新') : '站点已添加，配置已写入 wikitdb.config.js' });
+            setEditingSiteParam(null);
             setSiteForm({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
         } catch (e) {
-            setSiteMsg({ type: 'error', text: e.error || '添加站点失败' });
+            setSiteMsg({ type: 'error', text: e.error || (editingSiteParam ? '更新站点失败' : '添加站点失败') });
         } finally {
             setSavingSite(false);
         }
+    };
+
+    const handleEditSite = (site) => {
+        setEditingSiteParam(site.PARAM);
+        setSiteForm({
+            NAME: site.NAME || '',
+            URL: site.URL || '',
+            PARAM: site.PARAM || '',
+            WIKIT_ID: site.WIKIT_ID || '',
+            ImgURL: site.ImgURL || '',
+            GQL_API: site.GQL_API || '',
+            AUTHOR_TAG: site.AUTHOR_TAG || '',
+            ATTRIBUTION_PAGE: site.ATTRIBUTION_PAGE || '',
+            FORUM_SYNC: !!site.FORUM_SYNC
+        });
+        setSiteMsg(null);
+        document.querySelector('#site-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingSiteParam(null);
+        setSiteForm({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
+        setSiteMsg(null);
     };
 
     const handleDeleteSite = async (param) => {
@@ -451,7 +480,10 @@ export default function AdminDashboard() {
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300">{site.ATTRIBUTION_PAGE ? <span className="font-mono text-xs text-indigo-400">{site.ATTRIBUTION_PAGE}</span> : '-'}</td>
                                                     <td className="px-4 py-2.5 text-sm text-neutral-300">{site.FORUM_SYNC ? '是' : '否'}</td>
                                                     <td className="px-4 py-2.5 text-sm">
-                                                        <button onClick={() => handleDeleteSite(site.PARAM)} className={btnDanger}>删除</button>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button onClick={() => handleEditSite(site)} className={btnGhost}>编辑</button>
+                                                            <button onClick={() => handleDeleteSite(site.PARAM)} className={btnDanger}>删除</button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -461,8 +493,8 @@ export default function AdminDashboard() {
                                 {sites.length === 0 && <div className="p-6 text-center text-sm text-neutral-500">暂无收录站点</div>}
                             </div>
 
-                            <div className={cardCls + ' space-y-3'}>
-                                <div className="text-sm font-medium text-neutral-200">添加站点</div>
+                            <div id="site-form-card" className={cardCls + ' space-y-3'}>
+                                <div className="text-sm font-medium text-neutral-200">{editingSiteParam ? `编辑站点：${editingSiteParam}` : '添加站点'}</div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <input value={siteForm.NAME} onChange={e => setSiteForm(p => ({ ...p, NAME: e.target.value }))} placeholder="站点名称 *（如 深林文学部）" className={inputLgCls} />
                                     <input value={siteForm.URL} onChange={e => setSiteForm(p => ({ ...p, URL: e.target.value }))} placeholder="站点 URL *（如 https://xxx.wikidot.com/）" className={inputLgCls} />
@@ -478,7 +510,8 @@ export default function AdminDashboard() {
                                     </label>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <button onClick={handleAddSite} disabled={savingSite} className={btnPrimary + ' disabled:opacity-50'}>{savingSite ? '保存中...' : '添加站点'}</button>
+                                    <button onClick={handleAddSite} disabled={savingSite} className={btnPrimary + ' disabled:opacity-50'}>{savingSite ? '保存中...' : (editingSiteParam ? '保存修改' : '添加站点')}</button>
+                                    {editingSiteParam && <button onClick={handleCancelEdit} className={btnGhost}>取消编辑</button>}
                                 </div>
                                 <div className="text-xs text-neutral-500">提示：站点变更会立即写入 wikitdb.config.js。已构建的静态页面与正在运行的爬虫进程（npm run worker）需重启后才会使用新的站点列表。</div>
                             </div>
