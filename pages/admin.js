@@ -44,6 +44,20 @@ export default function AdminDashboard() {
     const [forumSyncResult, setForumSyncResult] = useState(null);
     const [honeypotLogs, setHoneypotLogs] = useState([]);
     const [overviewStats, setOverviewStats] = useState(null);
+    const [sites, setSites] = useState([]);
+    const [siteForm, setSiteForm] = useState({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
+    const [siteMsg, setSiteMsg] = useState(null);
+    const [savingSite, setSavingSite] = useState(false);
+    const [editingSiteParam, setEditingSiteParam] = useState(null);
+    const [crawlerStatus, setCrawlerStatus] = useState(null);
+    const [crawlerSites, setCrawlerSites] = useState([]);
+    const [crawlerLoading, setCrawlerLoading] = useState(false);
+    const [fileLogs, setFileLogs] = useState({ lines: [], totalLines: 0 });
+    const [fileLogKey, setFileLogKey] = useState('crawler');
+    const [fileLogLoading, setFileLogLoading] = useState(false);
+    const [staffMsg, setStaffMsg] = useState(null);
+    const [staffEditing, setStaffEditing] = useState(null);
+    const [staffEditSites, setStaffEditSites] = useState([]);
     const authHeaders = () => {
         const h = { 'Content-Type': 'application/json' };
         if (typeof localStorage !== 'undefined') {
@@ -94,16 +108,31 @@ export default function AdminDashboard() {
             fetch('/api/admin/access-logs?limit=100', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { logs: [] }),
             fetch('/api/admin/honeypot-logs?limit=200', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { logs: [] }),
             fetch('/api/admin/overview', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : null),
-        ]).then(([uData, lData, qData, aData, hData, oData]) => {
+            fetch('/api/admin/sites', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { sites: [] }),
+            fetch('/api/admin/crawler-status', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { sites: [] }),
+            fetch('/api/admin/file-logs?file=crawler&lines=800', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : { lines: [], totalLines: 0 }),
+        ]).then(([uData, lData, qData, aData, hData, oData, siteData, crawlerData, fileLogData]) => {
             setUsers(uData.users || []);
             setLogs(lData.logs || []);
             setQuarantineData({ wikis: qData.wikis || [], tags: qData.tags || [], authors: qData.authors || [] });
             setAccessLogs(aData.logs || []);
             setHoneypotLogs(hData.logs || []);
             if (oData) setOverviewStats(oData);
+            setSites(siteData.sites || []);
+            setCrawlerStatus(crawlerData.status || null);
+            setCrawlerSites(crawlerData.sites || []);
+            if (fileLogData && Array.isArray(fileLogData.lines)) setFileLogs(fileLogData);
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentUser]);
+
+    useEffect(() => {
+        if (!currentUser?.isAdmin || activeTab !== 'crawler') return;
+        refreshCrawler();
+        const timer = setInterval(refreshCrawler, 10000);
+        return () => clearInterval(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentUser, activeTab]);
 
     const outerWrap = children => (
         <div className="-mx-4 sm:-mx-6 lg:-mx-8">
@@ -141,6 +170,104 @@ export default function AdminDashboard() {
     const refreshLogs = () => api('/api/admin/logs?limit=50').then(d => setLogs(d.logs || []));
     const refreshAccessLogs = () => api('/api/admin/access-logs?limit=100').then(d => setAccessLogs(d.logs || []));
     const refreshHoneypot = () => api('/api/admin/honeypot-logs?limit=200').then(d => setHoneypotLogs(d.logs || []));
+    const refreshSites = () => api('/api/admin/sites').then(d => setSites(d.sites || []));
+    const refreshCrawler = () => {
+        setCrawlerLoading(true);
+        return api('/api/admin/crawler-status')
+            .then(d => { setCrawlerStatus(d.status || null); setCrawlerSites(d.sites || []); })
+            .catch(() => {})
+            .finally(() => setCrawlerLoading(false));
+    };
+    const refreshFileLogs = (key = fileLogKey) => {
+        setFileLogLoading(true);
+        return api(`/api/admin/file-logs?file=${encodeURIComponent(key)}&lines=800`)
+            .then(d => setFileLogs(d))
+            .catch(() => setFileLogs({ lines: [], totalLines: 0 }))
+            .finally(() => setFileLogLoading(false));
+    };
+
+    const handleAddSite = async () => {
+        if (!siteForm.NAME || !siteForm.URL || !siteForm.PARAM || !siteForm.WIKIT_ID) {
+            setSiteMsg({ type: 'error', text: '请填写必填字段（站点名称 / URL / PARAM / WIKIT_ID）' });
+            return;
+        }
+        setSavingSite(true);
+        setSiteMsg(null);
+        try {
+            const isEdit = !!editingSiteParam;
+            const d = await api('/api/admin/sites', {
+                method: isEdit ? 'PUT' : 'POST',
+                body: JSON.stringify(isEdit ? { param: editingSiteParam, ...siteForm } : siteForm)
+            });
+            setSites(d.sites || []);
+            setSiteMsg({ type: 'ok', text: isEdit ? (d.message || '站点已更新') : '站点已添加，配置已写入 wikitdb.config.js' });
+            setEditingSiteParam(null);
+            setSiteForm({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
+        } catch (e) {
+            setSiteMsg({ type: 'error', text: e.error || (editingSiteParam ? '更新站点失败' : '添加站点失败') });
+        } finally {
+            setSavingSite(false);
+        }
+    };
+
+    const handleEditSite = (site) => {
+        setEditingSiteParam(site.PARAM);
+        setSiteForm({
+            NAME: site.NAME || '',
+            URL: site.URL || '',
+            PARAM: site.PARAM || '',
+            WIKIT_ID: site.WIKIT_ID || '',
+            ImgURL: site.ImgURL || '',
+            GQL_API: site.GQL_API || '',
+            AUTHOR_TAG: site.AUTHOR_TAG || '',
+            ATTRIBUTION_PAGE: site.ATTRIBUTION_PAGE || '',
+            FORUM_SYNC: !!site.FORUM_SYNC
+        });
+        setSiteMsg(null);
+        document.querySelector('#site-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingSiteParam(null);
+        setSiteForm({ NAME: '', URL: '', PARAM: '', WIKIT_ID: '', ImgURL: '', GQL_API: '', AUTHOR_TAG: '', ATTRIBUTION_PAGE: '', FORUM_SYNC: false });
+        setSiteMsg(null);
+    };
+
+    const handleDeleteSite = async (param) => {
+        if (!confirm(`确定删除站点 "${param}"？此操作会立即修改 wikitdb.config.js。`)) return;
+        try {
+            const d = await api('/api/admin/sites', { method: 'DELETE', body: JSON.stringify({ param }) });
+            setSites(d.sites || []);
+            setSiteMsg({ type: 'ok', text: `站点 "${param}" 已删除` });
+        } catch (e) {
+            setSiteMsg({ type: 'error', text: e.error || '删除站点失败' });
+        }
+    };
+
+    const handleSetStaff = async () => {
+        if (!staffEditing) return;
+        if (!staffEditSites.length) { setStaffMsg({ type: 'error', text: '请至少选择一个负责站点' }); return; }
+        try {
+            const d = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ targetUser: staffEditing, action: 'set_staff', staffSites: staffEditSites }) });
+            setStaffMsg({ type: 'ok', text: d.message || '已设置' });
+            setStaffEditing(null);
+            setStaffEditSites([]);
+            refreshUsers();
+        } catch (e) {
+            setStaffMsg({ type: 'error', text: e.error || '设置失败' });
+        }
+    };
+
+    const handleUnsetStaff = async (username) => {
+        if (!confirm(`确定取消用户 ${username} 的职员身份？`)) return;
+        try {
+            const d = await api('/api/admin/users', { method: 'POST', body: JSON.stringify({ targetUser: username, action: 'unset_staff' }) });
+            setStaffMsg({ type: 'ok', text: d.message || '已取消' });
+            refreshUsers();
+        } catch (e) {
+            setStaffMsg({ type: 'error', text: e.error || '操作失败' });
+        }
+    };
 
     const handleInspect = async () => {
         if (!inspectTarget.trim()) return;
@@ -226,6 +353,8 @@ export default function AdminDashboard() {
 
     const tabs = [
         { id: 'overview', label: '概览' },
+        { id: 'sites', label: '站点管理' },
+        { id: 'crawler', label: '爬虫状态' },
         { id: 'honeypot', label: '蜜罐' },
         { id: 'members', label: '成员' },
         { id: 'quarantine', label: '隔离区' },
@@ -245,6 +374,25 @@ export default function AdminDashboard() {
     const tableTheadCls = 'bg-neutral-800';
     const tableRowCls = 'divide-y divide-neutral-800 bg-neutral-900';
     const hoverRowCls = 'hover:bg-neutral-800';
+
+    const fmtTime = ts => ts ? new Date(ts).toLocaleString() : '-';
+
+    const siteStatusBadge = (status) => {
+        const map = {
+            running: ['bg-amber-950 text-amber-300 border-amber-800', '运行中'],
+            done: ['bg-emerald-950 text-emerald-300 border-emerald-800', '完成'],
+            pending: ['bg-neutral-800 text-neutral-400 border-neutral-700', '等待'],
+            error: ['bg-red-950 text-red-300 border-red-800', '异常'],
+        };
+        const [cls, label] = map[status] || map.pending;
+        return <span className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${cls}`}>{label}</span>;
+    };
+
+    const siteStageLabel = (stage) => ({
+        list: '拉取页面清单',
+        crawl: '抓取评分/讨论',
+        done: '已完成',
+    }[stage] || '-');
 
     return (
         <div className="-mx-4 sm:-mx-6 lg:-mx-8">
@@ -283,6 +431,159 @@ export default function AdminDashboard() {
                                     ))}
                                     {logs.length === 0 && <div className="text-neutral-500 text-sm">暂无日志</div>}
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Sites */}
+                    {activeTab === 'sites' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">收录站点管理（写入 wikitdb.config.js）</div>
+                                <button onClick={refreshSites} className={btnGhost}>刷新</button>
+                            </div>
+
+                            {siteMsg && (
+                                <div className={`rounded-md border px-3 py-2 text-sm ${siteMsg.type === 'ok' ? 'border-emerald-800 bg-emerald-950 text-emerald-300' : 'border-red-800 bg-red-950 text-red-300'}`}>
+                                    {siteMsg.text}
+                                </div>
+                            )}
+
+                            <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-neutral-800">
+                                        <thead className={tableTheadCls}>
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">站点</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">链接</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">PARAM</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">WIKIT_ID</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">归属页</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">论坛同步</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className={tableRowCls}>
+                                            {sites.map(site => (
+                                                <tr key={site.PARAM} className={hoverRowCls}>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-200">
+                                                        <div className="flex items-center gap-2">
+                                                            {site.ImgURL && <img src={site.ImgURL} alt="" className="h-6 w-6 rounded object-cover bg-neutral-800" onError={e => { e.currentTarget.style.display = 'none'; }} />}
+                                                            <span>{site.NAME}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-xs text-indigo-400 max-w-[240px] truncate">
+                                                        <a href={site.URL} target="_blank" rel="noreferrer" className="hover:underline">{site.URL}</a>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{site.PARAM}</td>
+                                                    <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{site.WIKIT_ID}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{site.ATTRIBUTION_PAGE ? <span className="font-mono text-xs text-indigo-400">{site.ATTRIBUTION_PAGE}</span> : '-'}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{site.FORUM_SYNC ? '是' : '否'}</td>
+                                                    <td className="px-4 py-2.5 text-sm">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button onClick={() => handleEditSite(site)} className={btnGhost}>编辑</button>
+                                                            <button onClick={() => handleDeleteSite(site.PARAM)} className={btnDanger}>删除</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {sites.length === 0 && <div className="p-6 text-center text-sm text-neutral-500">暂无收录站点</div>}
+                            </div>
+
+                            <div id="site-form-card" className={cardCls + ' space-y-3'}>
+                                <div className="text-sm font-medium text-neutral-200">{editingSiteParam ? `编辑站点：${editingSiteParam}` : '添加站点'}</div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <input value={siteForm.NAME} onChange={e => setSiteForm(p => ({ ...p, NAME: e.target.value }))} placeholder="站点名称 *（如 深林文学部）" className={inputLgCls} />
+                                    <input value={siteForm.URL} onChange={e => setSiteForm(p => ({ ...p, URL: e.target.value }))} placeholder="站点 URL *（如 https://xxx.wikidot.com/）" className={inputLgCls} />
+                                    <input value={siteForm.PARAM} onChange={e => setSiteForm(p => ({ ...p, PARAM: e.target.value }))} placeholder="PARAM 简写 *（如 dfc）" className={inputLgCls} />
+                                    <input value={siteForm.WIKIT_ID} onChange={e => setSiteForm(p => ({ ...p, WIKIT_ID: e.target.value }))} placeholder="WIKIT_ID *（Wikit 站点名）" className={inputLgCls} />
+                                    <input value={siteForm.ImgURL} onChange={e => setSiteForm(p => ({ ...p, ImgURL: e.target.value }))} placeholder="Logo 链接（可选）" className={inputLgCls} />
+                                    <input value={siteForm.GQL_API} onChange={e => setSiteForm(p => ({ ...p, GQL_API: e.target.value }))} placeholder="GQL_API 端点（可选，默认 wikit 官方）" className={inputLgCls} />
+                                    <input value={siteForm.AUTHOR_TAG} onChange={e => setSiteForm(p => ({ ...p, AUTHOR_TAG: e.target.value }))} placeholder="作者标签（可选，默认 作者）" className={inputLgCls} />
+                                    <input value={siteForm.ATTRIBUTION_PAGE} onChange={e => setSiteForm(p => ({ ...p, ATTRIBUTION_PAGE: e.target.value }))} placeholder="归属资料页面（可选，如 attribution-metadata）" className={inputLgCls} />
+                                    <label className="flex items-center gap-2 text-sm text-neutral-300">
+                                        <input type="checkbox" checked={!!siteForm.FORUM_SYNC} onChange={e => setSiteForm(p => ({ ...p, FORUM_SYNC: e.target.checked }))} className="h-4 w-4 rounded border-neutral-700 bg-neutral-950" />
+                                        启用论坛同步 (FORUM_SYNC)
+                                    </label>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <button onClick={handleAddSite} disabled={savingSite} className={btnPrimary + ' disabled:opacity-50'}>{savingSite ? '保存中...' : (editingSiteParam ? '保存修改' : '添加站点')}</button>
+                                    {editingSiteParam && <button onClick={handleCancelEdit} className={btnGhost}>取消编辑</button>}
+                                </div>
+                                <div className="text-xs text-neutral-500">提示：站点变更会立即写入 wikitdb.config.js。已构建的静态页面与正在运行的爬虫进程（npm run worker）需重启后才会使用新的站点列表。</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Crawler */}
+                    {activeTab === 'crawler' && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">爬虫运行状态（每 3 小时自动执行）</div>
+                                <div className="flex items-center gap-2">
+                                    {crawlerLoading && <span className="text-xs text-neutral-500">加载中...</span>}
+                                    <button onClick={refreshCrawler} className={btnGhost}>刷新</button>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <div className={cardCls}>
+                                    <div className="text-xs font-medium text-neutral-400">爬虫进程</div>
+                                    <div className="mt-2 text-2xl font-bold text-neutral-100">{crawlerStatus?.running ? '运行中' : '空闲'}</div>
+                                    {crawlerStatus?.running && <div className="mt-1 text-xs text-amber-400">{crawlerStatus.currentSite ? `正在抓取: ${crawlerStatus.currentSite}` : '准备中...'}（{siteStageLabel(crawlerStatus.currentStage)}）</div>}
+                                </div>
+                                <div className={cardCls}>
+                                    <div className="text-xs font-medium text-neutral-400">站点进度</div>
+                                    <div className="mt-2 text-2xl font-bold text-neutral-100">{crawlerStatus?.overall?.doneSites ?? 0} <span className="text-sm font-normal text-neutral-500">/ {crawlerStatus?.overall?.totalSites ?? crawlerSites.length}</span></div>
+                                </div>
+                                <div className={cardCls}>
+                                    <div className="text-xs font-medium text-neutral-400">上次开始</div>
+                                    <div className="mt-2 text-lg font-semibold text-neutral-100">{fmtTime(crawlerStatus?.startedAt)}</div>
+                                </div>
+                                <div className={cardCls}>
+                                    <div className="text-xs font-medium text-neutral-400">上次完成</div>
+                                    <div className="mt-2 text-lg font-semibold text-neutral-100">{fmtTime(crawlerStatus?.finishedAt || crawlerStatus?.lastRun)}</div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-neutral-800">
+                                        <thead className={tableTheadCls}>
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">站点</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">状态</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">页面清单</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">已处理</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">评分</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">讨论</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">失败/重试</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">最近运行</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className={tableRowCls}>
+                                            {crawlerSites.map(s => (
+                                                <tr key={s.param} className={hoverRowCls}>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-200">
+                                                        <div>{s.name}</div>
+                                                        <div className="text-xs font-mono text-neutral-500">{s.param}</div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-sm" title={s.error || ''}>{siteStatusBadge(s.status)}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{s.pagesFound ?? 0}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{s.pagesProcessed ?? 0}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{s.votes ?? 0}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{s.discussions ?? 0}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-300">{s.errors ?? 0}</td>
+                                                    <td className="px-4 py-2.5 text-sm text-neutral-500 whitespace-nowrap">{fmtTime(s.lastRun)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {crawlerSites.length === 0 && <div className="p-6 text-center text-sm text-neutral-500">暂无站点数据，请先运行爬虫进程（npm run worker）</div>}
                             </div>
                         </div>
                     )}
@@ -334,6 +635,39 @@ export default function AdminDashboard() {
                                 <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索用户名..."
                                     className={inputLgCls} />
                             </div>
+
+                            {staffMsg && (
+                                <div className={`rounded-md border px-3 py-2 text-sm ${staffMsg.type === 'ok' ? 'border-emerald-800 bg-emerald-950 text-emerald-300' : 'border-red-800 bg-red-950 text-red-300'}`}>
+                                    {staffMsg.text}
+                                </div>
+                            )}
+
+                            {staffEditing && (
+                                <div className={cardCls + ' space-y-3'}>
+                                    <div className="text-sm font-medium text-neutral-200">
+                                        设为职员：{staffEditing}
+                                        <span className="ml-2 text-xs text-neutral-500">选择其负责的站点（可多选）</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {config.SUPPORT_WIKI.map(w => (
+                                            <button key={w.PARAM} onClick={() => setStaffEditSites(p => p.includes(w.PARAM) ? p.filter(x => x !== w.PARAM) : [...p, w.PARAM])}
+                                                className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                                                    staffEditSites.includes(w.PARAM)
+                                                        ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300'
+                                                        : 'border-neutral-700 bg-neutral-900 text-neutral-400 hover:text-neutral-200'
+                                                }`}>
+                                                {w.NAME} ({w.PARAM})
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={handleSetStaff} className={btnPrimary}>确认设为职员</button>
+                                        <button onClick={() => { setStaffEditing(null); setStaffEditSites([]); }} className={btnGhost}>取消</button>
+                                        {staffEditSites.length === 0 && <span className="text-xs text-neutral-500">请至少选择一个站点</span>}
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="rounded-lg border border-neutral-800 overflow-hidden bg-neutral-900">
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-neutral-800">
@@ -342,6 +676,7 @@ export default function AdminDashboard() {
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">用户名</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">余额</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">角色</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400">职员</th>
                                                 <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-neutral-400">操作</th>
                                             </tr>
                                         </thead>
@@ -351,8 +686,23 @@ export default function AdminDashboard() {
                                                     <td className="px-4 py-2.5 text-sm text-neutral-200">{u.username}</td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-neutral-300">{u.balance?.toLocaleString()}</td>
                                                     <td className="px-4 py-2.5 text-sm">{u.isAdmin ? <span className="rounded bg-amber-500/10 border border-amber-500/30 px-1.5 py-0.5 text-xs text-amber-400">管理员</span> : <span className="text-neutral-500">用户</span>}</td>
+                                                    <td className="px-4 py-2.5 text-sm">
+                                                        {u.isStaff ? (
+                                                            <div>
+                                                                <span className="rounded bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 text-xs text-emerald-400">职员</span>
+                                                                <div className="mt-0.5 text-[10px] text-neutral-500">{(u.staffSites || []).join('、')}</div>
+                                                            </div>
+                                                        ) : <span className="text-neutral-600">-</span>}
+                                                    </td>
                                                     <td className="px-4 py-2.5 text-right">
-                                                        <button onClick={() => { setInspectTarget(u.username); handleInspect(); }} className={btnGhost}>查看</button>
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button onClick={() => { setInspectTarget(u.username); handleInspect(); }} className={btnGhost}>查看</button>
+                                                            {u.isStaff ? (
+                                                                <button onClick={() => handleUnsetStaff(u.username)} className={btnGhost + ' !text-red-400 hover:!border-red-500/50'}>取消职员</button>
+                                                            ) : (
+                                                                <button onClick={() => { setStaffEditing(u.username); setStaffEditSites(u.staffSites || []); setStaffMsg(null); }} className={btnGhost + ' !text-emerald-400 hover:!border-emerald-500/50'}>设为职员</button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -448,6 +798,33 @@ export default function AdminDashboard() {
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* File Logs */}
+                    {activeTab === 'logs' && (
+                        <div className={cardCls + ' space-y-3'}>
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">服务器 / 爬虫文件日志</div>
+                                <div className="flex items-center gap-2">
+                                    <select value={fileLogKey} onChange={e => { setFileLogKey(e.target.value); refreshFileLogs(e.target.value); }}
+                                        className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-sm text-neutral-100 outline-none focus:ring-2 focus:ring-indigo-500">
+                                        <option value="crawler">crawler.log（爬虫）</option>
+                                        <option value="server">server.log</option>
+                                        <option value="serverErr">server-err.log</option>
+                                    </select>
+                                    <button onClick={() => refreshFileLogs()} className={btnGhost}>{fileLogLoading ? '加载中...' : '刷新'}</button>
+                                </div>
+                            </div>
+                            <pre className="rounded-md bg-neutral-800 border border-neutral-700 p-3 text-xs text-neutral-300 overflow-auto max-h-96 whitespace-pre-wrap leading-relaxed">
+                                {fileLogs.lines && fileLogs.lines.length > 0 ? fileLogs.lines.join('\n') : '（暂无日志内容）'}
+                            </pre>
+                            {fileLogs.totalLines > 0 && (
+                                <div className="text-xs text-neutral-500">
+                                    共 {fileLogs.totalLines} 行，显示最近 {fileLogs.lines ? fileLogs.lines.length : 0} 行
+                                    {fileLogs.mtime ? `（最后更新：${fmtTime(fileLogs.mtime)}）` : ''}
+                                </div>
+                            )}
                         </div>
                     )}
 

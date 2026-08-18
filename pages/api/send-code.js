@@ -4,6 +4,43 @@ import crypto from 'crypto';
 import { rateLimit, ipRateLimit, getClientIp } from '../../utils/security';
 import { withCsrf } from '../../utils/csrf';
 
+/**
+ * 构建 SMTP 发送器。
+ * 若 SMTP 未配置（host/port/user 缺失），返回 null，由调用方给出友好提示。
+ */
+function buildTransporter() {
+    const host = (process.env.SMTP_HOST || '').trim();
+    const port = parseInt(process.env.SMTP_PORT || '', 10);
+    const user = (process.env.SMTP_USER || '').trim();
+    const pass = process.env.SMTP_PASS || '';
+
+    if (!host || !port || !user) {
+        return null;
+    }
+
+    // secure 模式：
+    // - 显式配置 SMTP_SECURE=true/false 时优先采用；
+    // - 未配置时按端口推断：465 走 SSL（secure=true），其余如 587/25 走 STARTTLS（secure=false）。
+    const secure = process.env.SMTP_SECURE !== undefined
+        ? String(process.env.SMTP_SECURE).toLowerCase() === 'true'
+        : port === 465;
+
+    const transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: user ? { user, pass } : undefined,
+        // 快速失败，避免长时间挂起阻塞请求
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 30000,
+    });
+
+    const from = (process.env.SMTP_FROM || '').trim() || user;
+
+    return { transporter, from };
+}
+
 async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: '请求方法不允许' });
@@ -15,6 +52,12 @@ async function handler(req, res) {
     }
 
     try {
+        // 提前校验 SMTP 配置，避免无谓的限速/数据库写入
+        const smtp = buildTransporter();
+        if (!smtp) {
+            return res.status(500).json({ error: '发信服务未配置，请管理员在 .env 中填写 SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS' });
+        }
+
         const ip = getClientIp(req);
         if (ipRateLimit(ip, 'send-code', 10, 60 * 60 * 1000)) {
             return res.status(429).json({ error: '当前网络发送验证码过于频繁' });
@@ -49,18 +92,8 @@ async function handler(req, res) {
             create: { email, code, expiresAt },
         });
 
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            secure: true,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-
-        await transporter.sendMail({
-            from: `"WikitDB" <${process.env.SMTP_USER}>`,
+        await smtp.transporter.sendMail({
+            from: `"WikitDB" <${smtp.from}>`,
             to: email,
             subject: '【WikitDB】您的注册验证码',
             html: `
@@ -75,6 +108,10 @@ async function handler(req, res) {
         return res.status(200).json({ message: '验证码已发送至您的邮箱' });
     } catch (error) {
         console.error('发信异常:', error);
+        // 发信失败时清理未送达的验证码记录，避免残留记录干扰下次发送
+        if (email) {
+            await prisma.verificationCode.delete({ where: { email } }).catch(() => {});
+        }
         return res.status(500).json({ error: '发信服务异常，请联系管理员' });
     }
 }

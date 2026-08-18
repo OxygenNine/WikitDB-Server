@@ -89,6 +89,7 @@ module.exports = {
             PARAM: "brcn",
             WIKIT_ID: "backrooms-wiki-cn",
             GQL_API: "https://wikit.unitreaty.org/backrooms/apiv1/graphql",
+            ATTRIBUTION_PAGE: "attribution-metadata",
             FORUM_SYNC: true
         },
     ]

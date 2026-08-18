@@ -6,7 +6,11 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 const LOGIN_URL = 'https://www.wikidot.com/default--flow/login__LoginPopupScreen';
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+// 注意：实测发现 Wikidot 会基于 UA 做反滥用判定。
+// 完整 Chrome UA（含 (KHTML, like Gecko) Chrome/xx）对 edit/PageEditModule 返回 no_permission，
+// 而中段 UA（Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36）可正常访问。
+// 故全库统一使用中段 UA（与 login() 一致），避免被识别为机器人。
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -254,6 +258,90 @@ async function postAnnouncement(baseUrl, pageName, cookie, title, text) {
     return { categoryId, threadId, target: label, httpStatus: postRes.status };
 }
 
+/**
+ * 用已登录的机器人会话保存/创建页面（代发审核通过后调用）
+ * 已实测通过的两步协议：
+ *   1) POST ajax-module-connector.php?moduleName=edit/PageEditModule&mode=page&wiki_page=<页面名>
+ *      → 响应顶层返回 lock_id / lock_secret（新建与编辑均适用）
+ *   2) POST action=WikiPageAction&event=savePage&mode=page&wiki_page=<页面名>
+ *      &lock_id&lock_secret&page_id(已存在时)&title&source&comments&wikidot_token7
+ * @param {string} baseUrl 站点首页（如 https://rule-wiki.wikidot.com）
+ * @param {string} pageName 页面名（unix name）
+ * @param {string} cookie 登录会话 Cookie（由 login() 获取）
+ * @param {{title?: string, source: string, comments?: string}} data
+ * @returns {Promise<{ok: boolean, httpStatus: number, pageUrl: string, detail?: object}>}
+ */
+async function savePage(baseUrl, pageName, cookie, { title, source, comments }) {
+    if (!source || !String(source).trim()) throw new Error('页面内容不能为空');
+
+    const cleanName = String(pageName).trim();
+    const pageUrl = `${baseUrl}/${encodeURIComponent(cleanName)}`;
+    const ajaxUrl = `${baseUrl}/ajax-module-connector.php`;
+    const token7 = extractToken7(cookie);
+    const headers = { ...buildHeaders(cookie), 'Content-Type': 'application/x-www-form-urlencoded' };
+    const post = (params) => axios.post(ajaxUrl, new URLSearchParams(params).toString(), {
+        headers,
+        timeout: 30000,
+        maxRedirects: 5,
+        validateStatus: (s) => s >= 200 && s < 400
+    });
+
+    // 步骤 1：加载编辑器，获取编辑锁
+    let lockId = null;
+    let lockSecret = null;
+    let pageId = '';
+    const editorRes = await post({
+        moduleName: 'edit/PageEditModule',
+        mode: 'page',
+        wiki_page: cleanName,
+        wikidot_token7: token7
+    });
+    const editorData = editorRes.data;
+    if (editorData && typeof editorData === 'object' && editorData.status === 'ok') {
+        lockId = editorData.lock_id;
+        lockSecret = editorData.lock_secret;
+        const pageIdMatch = String(editorData.body || '').match(/name="page_id"\s*value="(\d+)"/);
+        pageId = pageIdMatch ? pageIdMatch[1] : '';
+    } else {
+        const rawMsg = (editorData && typeof editorData === 'object')
+            ? (editorData.message || editorData.status || JSON.stringify(editorData).slice(0, 200))
+            : (typeof editorData === 'string' ? editorData : JSON.stringify(editorData || ''));
+        const sessionHint = /登入为 Wikidot 用户|不能在此分类/.test(rawMsg)
+            ? '（机器人会话可能已失效或被限流，系统会自动重试）'
+            : '';
+        throw new Error(`无法获取编辑权限：${rawMsg || '页面不存在或机器人无编辑权限'}${sessionHint}`);
+    }
+    if (!lockId || !lockSecret) {
+        throw new Error('无法获取编辑锁（机器人可能没有该站点的编辑权限）');
+    }
+
+    // 步骤 2：带锁保存
+    const saveParams = {
+        moduleName: 'Empty',
+        action: 'WikiPageAction',
+        event: 'savePage',
+        mode: 'page',
+        wiki_page: cleanName,
+        lock_id: lockId,
+        lock_secret: lockSecret,
+        title: title || '',
+        source,
+        comments: comments || '',
+        wikidot_token7: token7
+    };
+    if (pageId) saveParams.page_id = pageId;
+
+    const saveRes = await post(saveParams);
+    const data = saveRes.data;
+    if (data && typeof data === 'object' && data.status === 'ok') {
+        return { ok: true, httpStatus: saveRes.status, pageUrl, detail: data };
+    }
+    const errMsg = (data && typeof data === 'object')
+        ? (data.message || data.status || JSON.stringify(data).slice(0, 200))
+        : (typeof data === 'string' ? data : JSON.stringify(data || ''));
+    throw new Error(`保存失败：${errMsg}`);
+}
+
 module.exports = {
     login,
     clearLoginCache,
@@ -263,5 +351,6 @@ module.exports = {
     addTag,
     findDiscussion,
     postAnnouncement,
+    savePage,
     sleep
 };

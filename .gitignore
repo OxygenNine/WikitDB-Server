@@ -15,6 +15,11 @@
 # runtime data and local databases
 /data/*.json
 
+# runtime logs
+crawler.log
+server.log
+server-err.log
+
 # editor / IDE
 .vscode
 .idea

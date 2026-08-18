@@ -1,0 +1,19 @@
+[Unit]
+Description=WikitDB Attribution Sync (fetch attribution pages + compute author scores every 30min)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/WikitDB-Server
+EnvironmentFile=/opt/WikitDB-Server/.env
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS=--max-old-space-size=1024
+Environment=PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/node /opt/WikitDB-Server/auto-attribution.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
