@@ -201,6 +201,18 @@ const AuthorProfile = () => {
                                 平均评分为 <span className="font-semibold text-white">{data.averageRating > 0 ? `+${data.averageRating}` : data.averageRating}</span>。
                             </p>
 
+                            {data.attribution && data.attribution.pages > 0 && (
+                                <div className="mb-6 rounded-lg border border-emerald-900/50 bg-emerald-950/30 p-4">
+                                    <p className="text-gray-300 leading-relaxed">
+                                        <span className="font-semibold text-emerald-400">归属资料</span>登记名下
+                                        <span className="font-semibold text-white"> {data.attribution.pages} </span>
+                                        个归属页面，归属总评分为
+                                        <span className="font-semibold text-emerald-400"> {data.attribution.score > 0 ? `+${data.attribution.score}` : data.attribution.score} </span>
+                                        （平均 <span className="font-semibold text-white">{data.attribution.average > 0 ? `+${data.attribution.average}` : data.attribution.average}</span>）。
+                                    </p>
+                                </div>
+                            )}
+
                             {data.siteStats && data.siteStats.length > 0 && (
                                 <>
                                     <h4 className="text-lg font-medium text-white mb-3">所属站点数据分布：</h4>
@@ -226,6 +238,34 @@ const AuthorProfile = () => {
                                         })}
                                     </div>
                                 </>
+                            )}
+
+                            {data.attribution && data.attribution.sites && data.attribution.sites.length > 0 && (
+                                <div className="mt-6">
+                                    <h4 className="text-lg font-medium text-white mb-3">归属站点分数分布（来自站点归属资料页）：</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        {data.attribution.sites.map((site, index) => (
+                                            <div key={index} className="bg-emerald-950/30 p-4 rounded-lg border border-emerald-900/40">
+                                                <div className="font-medium text-emerald-400 mb-2 truncate" title={site.siteName}>{site.siteName}</div>
+                                                <div className="text-sm text-gray-400 space-y-1">
+                                                    <div className="flex justify-between"><span>归属页面:</span> <span className="text-white">{site.pages}</span></div>
+                                                    <div className="flex justify-between">
+                                                        <span>归属总分:</span>
+                                                        <span className={`font-medium ${site.score > 0 ? 'text-emerald-400' : site.score < 0 ? 'text-red-400' : 'text-gray-300'}`}>
+                                                            {site.score > 0 ? `+${site.score}` : site.score}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>平均:</span>
+                                                        <span className={`font-medium ${site.average > 0 ? 'text-emerald-400' : site.average < 0 ? 'text-red-400' : 'text-gray-300'}`}>
+                                                            {site.average > 0 ? `+${site.average}` : site.average}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
                         </div>
 

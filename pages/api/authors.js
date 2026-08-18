@@ -1,10 +1,12 @@
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 import { withLogging } from '../../utils/logRequest';
+import prisma from '../../lib/prisma';
 const { DEFAULT_GQL_ENDPOINT } = require('../../utils/graphql');
 const { cached } = require('../../utils/cache');
 const { singleFlight } = require('../../utils/singleFlight');
 const { wikitLimiter } = require('../../utils/rateLimiter');
+const config = require('../../wikitdb.config.js');
 
 async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -142,6 +144,39 @@ async function handler(req, res) {
                 let averageRating = 0;
                 if (totalPages > 0) averageRating = (totalRating / totalPages).toFixed(1);
 
+                // 归属分数（作者名下，跨站点聚合自站点归属资料页）
+                let attribution = { score: 0, pages: 0, average: 0, sites: [] };
+                try {
+                    const scoreSettings = await prisma.setting.findMany({ where: { key: { startsWith: 'author_score:' } } });
+                    const sites = [];
+                    let totalScore = 0, totalPages = 0;
+                    for (const s of scoreSettings) {
+                        const siteParam = s.key.replace('author_score:', '');
+                        const scores = s.value; // lib/prisma 已自动解析为对象
+                        const entry = scores && scores[queryName.toLowerCase()];
+                        if (entry) {
+                            const siteCfg = config.SUPPORT_WIKI.find(w => w.PARAM === siteParam);
+                            sites.push({
+                                site: siteParam,
+                                siteName: siteCfg ? siteCfg.NAME : siteParam,
+                                score: entry.score || 0,
+                                pages: entry.pages || 0,
+                                average: entry.average || 0
+                            });
+                            totalScore += entry.score || 0;
+                            totalPages += entry.pages || 0;
+                        }
+                    }
+                    attribution = {
+                        score: Math.round(totalScore * 100) / 100,
+                        pages: totalPages,
+                        average: totalPages ? Math.round((totalScore / totalPages) * 100) / 100 : 0,
+                        sites
+                    };
+                } catch (e) {
+                    console.error('获取归属分数失败:', e.message);
+                }
+
                 const avatarUrl = userid
                     ? `http://www.wikidot.com/avatar.php?userid=${userid}`
                     : `https://www.wikidot.com/avatar.php?account=${accountName}`;
@@ -154,6 +189,7 @@ async function handler(req, res) {
                     totalPages,
                     averageRating,
                     siteStats,
+                    attribution,
                     pages: articlesData,
                     voteRecords,
                     favoriteAuthors
