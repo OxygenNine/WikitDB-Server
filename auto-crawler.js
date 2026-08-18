@@ -7,7 +7,6 @@ const { spawn } = require('child_process');
 const prisma = require('./lib/prisma');
 const config = require('./wikitdb.config.js');
 const { buildBackupArgs, getWikiName } = require('./utils/wikitBackup');
-const { fetchAttributionPage, aggregateAuthorScores, normalizePageKey } = require('./utils/attribution');
 const fs = require('fs');
 const path = require('path');
 
@@ -195,51 +194,6 @@ async function runCrawler() {
                 crawlStatus.currentStage = 'crawl';
             }
             await persistCrawlStatus();
-
-            // === 归属资料页面抓取 + 作者分数分配 ===
-            // 放在逐页处理之前执行：页面评分来自 listpages（allPages），无需等完整逐页爬取
-            if (siteConfig.ATTRIBUTION_PAGE) {
-                try {
-                    const attrRecords = await fetchAttributionPage(siteConfig, request);
-                    if (attrRecords.length > 0) {
-                        // 全量同步归属记录（以站点归属页为唯一事实来源）
-                        await prisma.$transaction([
-                            prisma.authorAttribution.deleteMany({ where: { siteParam: wikiParam } }),
-                            prisma.authorAttribution.createMany({
-                                data: attrRecords.map(a => ({ siteParam: wikiParam, page: a.page, username: a.username, type: a.type, date: a.date })),
-                                skipDuplicates: true
-                            })
-                        ]);
-
-                        // 保存页面评分（来自 listpages 的 rating/upvotes/downvotes）
-                        const pageScoreRows = allPages.map(p => ({
-                            page: p.page, title: p.title, rating: p.rating || 0,
-                            upvotes: p.upvotes || 0, downvotes: p.downvotes || 0
-                        }));
-                        await prisma.setting.upsert({
-                            where: { key: `page_scores:${wikiParam}` },
-                            update: { value: JSON.stringify(pageScoreRows) },
-                            create: { key: `page_scores:${wikiParam}`, value: JSON.stringify(pageScoreRows) }
-                        });
-
-                        // 按归属聚合作者分数
-                        const pageRatings = new Map();
-                        for (const pg of allPages) {
-                            pageRatings.set(normalizePageKey(pg.page), { rating: pg.rating || 0 });
-                        }
-                        const authorScores = aggregateAuthorScores(attrRecords, pageRatings);
-                        await prisma.setting.upsert({
-                            where: { key: `author_score:${wikiParam}` },
-                            update: { value: JSON.stringify(authorScores) },
-                            create: { key: `author_score:${wikiParam}`, value: JSON.stringify(authorScores) }
-                        });
-
-                        logLine(`归属资料: ${wikiParam} 解析 ${attrRecords.length} 条，作者 ${Object.keys(authorScores).length} 位`);
-                    }
-                } catch (e) {
-                    logLine(`归属资料抓取失败 [${wikiParam}]: ${e.message}`);
-                }
-            }
 
             let userVotesMap = {};
             let count = 0;
