@@ -1,3 +1,4 @@
+import prisma from '../../lib/prisma';
 const config = require('../../wikitdb.config.js');
 const { DEFAULT_GQL_ENDPOINT, getGraphQLEndpoint } = require('../../utils/graphql');
 const { cached } = require('../../utils/cache');
@@ -13,6 +14,42 @@ async function handler(req, res) {
     const { site = 'global' } = req.query;
 
     try {
+        // 优先使用站点归属资料分数生成排行榜（配置了归属页的站点）
+        let attributionRanking = null;
+        try {
+            if (site === 'global') {
+                const settings = await prisma.setting.findMany({ where: { key: { startsWith: 'author_score:' } } });
+                const agg = {};
+                for (const s of settings) {
+                    const scores = s.value; // lib/prisma 已自动解析
+                    if (!scores) continue;
+                    for (const [k, v] of Object.entries(scores)) {
+                        if (!agg[k]) agg[k] = { name: v.name, score: 0 };
+                        agg[k].score += v.score || 0;
+                    }
+                }
+                if (Object.keys(agg).length > 0) {
+                    attributionRanking = Object.values(agg)
+                        .sort((a, b) => b.score - a.score)
+                        .map((v, i) => ({ rank: i + 1, name: v.name, value: Math.round(v.score * 100) / 100 }));
+                }
+            } else {
+                const rec = await prisma.setting.findUnique({ where: { key: `author_score:${site}` } });
+                if (rec && rec.value && Object.keys(rec.value).length > 0) {
+                    attributionRanking = Object.values(rec.value)
+                        .sort((a, b) => b.score - a.score)
+                        .map((v, i) => ({ rank: i + 1, name: v.name, value: Math.round(v.score * 100) / 100 }));
+                }
+            }
+        } catch (e) {
+            console.error('[ranking] 归属排行榜计算失败:', e.message);
+        }
+
+        if (attributionRanking) {
+            res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate');
+            return res.status(200).json({ site, source: 'attribution', ranking: attributionRanking });
+        }
+
         const fetchGraphQL = async (queryStr, variables, endpoint = DEFAULT_GQL_ENDPOINT) => {
             await wikitLimiter.wait(8000);
             const gqlRes = await fetch(endpoint, {
