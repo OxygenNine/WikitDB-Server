@@ -1,6 +1,7 @@
 // pages/index.js
 import React, { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 const config = require('../wikitdb.config.js');
 
@@ -200,20 +201,20 @@ const Home = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-                        <a
+                        <Link
                             href="/pages"
                             className="group inline-flex items-center px-7 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-600/20 transition-all hover:shadow-indigo-500/40 hover:-translate-y-0.5"
                         >
                             <i aria-hidden="true" className="fa-solid fa-magnifying-glass mr-2 text-sm"></i>
                             开始检索
                             <i aria-hidden="true" className="fa-solid fa-arrow-right ml-2 text-xs opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all"></i>
-                        </a>
-                        <a
+                        </Link>
+                        <Link
                             href="/about"
                             className="px-7 py-3 text-gray-300 font-medium rounded-xl border border-gray-700 hover:bg-gray-800 hover:border-gray-600 transition-all hover:-translate-y-0.5"
                         >
                             了解更多
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </section>
@@ -278,10 +279,10 @@ const Home = () => {
                             <i aria-hidden="true" className="fa-solid fa-wand-magic-sparkles text-sm text-amber-400"></i>
                             常用工具直达
                         </div>
-                        <a href="/tools" className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1">
+                        <Link href="/tools" className="text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1">
                             全部工具
                             <i aria-hidden="true" className="fa-solid fa-chevron-right text-[10px]"></i>
-                        </a>
+                        </Link>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {tools.map((t) => (
@@ -395,9 +396,9 @@ const Home = () => {
                 </div>
                 <div className="text-center mt-6 text-xs text-gray-600">
                     想了解更多？{' '}
-                    <a href="/about" className="text-indigo-400 hover:text-indigo-300 underline-offset-2 hover:underline">
+                    <Link href="/about" className="text-indigo-400 hover:text-indigo-300 underline-offset-2 hover:underline">
                         查看完整介绍页
-                    </a>
+                    </Link>
                 </div>
             </section>
 
@@ -416,19 +417,19 @@ const Home = () => {
                             有账号才能用作者评分、动态追踪、高级搜索这些功能。免费的，花不了一分钟。
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-                            <a
+                            <Link
                                 href="/register"
                                 className="inline-flex items-center px-8 py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-gray-100 transition-all hover:-translate-y-0.5 shadow-lg"
                             >
                                 <i aria-hidden="true" className="fa-solid fa-user-plus mr-2 text-sm"></i>
                                 注册账号
-                            </a>
-                            <a
+                            </Link>
+                            <Link
                                 href="/login"
                                 className="px-8 py-3 text-white font-semibold rounded-xl bg-white/10 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur-sm border border-white/20"
                             >
                                 已有账号，登录
-                            </a>
+                            </Link>
                         </div>
                         <p className="mt-4 text-[11px] text-indigo-200/60 tracking-wide">
                             <i aria-hidden="true" className="fa-solid fa-lock mr-1"></i>
