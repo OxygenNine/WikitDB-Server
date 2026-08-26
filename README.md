@@ -193,10 +193,11 @@ WikitDB-Server/
 
 ## 致谢
 
-- **Laimu_slime** — 核心开发者
+- **Laimu_slime** — 主要贡献者/维护者
 - **lestday233** — 初版 WikitDB 创始人
 - **白然** — WikitDB LOGO 设计师
 - **Kakushi** - Wikit创始人，Wikit API运维
+- **UMOU** - 贡献者
 - 每一位为 Wikidot 社区贡献原创内容的创作者
 
 ## 许可证
