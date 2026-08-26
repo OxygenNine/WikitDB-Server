@@ -1,5 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import fs from 'fs';
 import path from 'path';
 const config = require('../wikitdb.config.js');
@@ -70,19 +71,19 @@ const About = ({ contentHtml }) => {
                                 打开检索页搜索页面，或注册账号解锁作者追踪与虚拟股市等个性化功能。
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-                                <a
+                                <Link
                                     href="/pages"
                                     className="inline-flex items-center px-7 py-3 bg-white text-indigo-600 font-semibold rounded-xl hover:bg-gray-100 transition-all hover:-translate-y-0.5 shadow-lg"
                                 >
                                     <i aria-hidden="true" className="fa-solid fa-magnifying-glass mr-2 text-sm"></i>
                                     开始检索
-                                </a>
-                                <a
+                                </Link>
+                                <Link
                                     href="/register"
                                     className="px-7 py-3 bg-white/10 text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur-sm"
                                 >
                                     注册账号
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     </div>

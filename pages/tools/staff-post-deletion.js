@@ -307,7 +307,7 @@ const StaffPostDeletion = () => {
         }
     };
 
-    const useBot = (bot) => {
+    const selectBot = (bot) => {
         setSelectedBotId(bot.id);
         setBotUsername(bot.username);
         setBotPassword('');
@@ -433,7 +433,7 @@ const StaffPostDeletion = () => {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <button type="button" onClick={() => useBot(bot)}
+                                            <button type="button" onClick={() => selectBot(bot)}
                                                 className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${selectedBotId === bot.id ? 'bg-indigo-600 text-white' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30'}`}>
                                                 {selectedBotId === bot.id ? '✓ 使用中' : '使用'}
                                             </button>

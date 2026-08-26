@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 
 const config = require('../wikitdb.config.js');
 const forumSyncSites = config.SUPPORT_WIKI.filter(w => w.FORUM_SYNC);
@@ -150,7 +151,7 @@ export default function AdminDashboard() {
     if (!currentUser) return outerWrap(
         <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6 text-center">
             <div className="text-neutral-400 text-sm mb-3">请先登录后访问管理面板</div>
-            <a href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</a>
+            <Link href="/login?redirect=/admin" className="inline-block rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">前往登录</Link>
         </div>
     );
     if (!currentUser.isAdmin) return outerWrap(
