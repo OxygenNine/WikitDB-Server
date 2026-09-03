@@ -198,20 +198,20 @@ export default function StaffPanel() {
                         ))}
                     </div>
 
-                    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800/50">
+                                            <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 overflow-hidden bg-white dark:bg-zinc-800/50">
                         {loading ? (
-                            <div className="p-12 text-center text-sm text-gray-500">加载中...</div>
+                            <div className="p-12 text-center text-sm text-zinc-500">加载中...</div>
                         ) : posts.length === 0 ? (
-                            <div className="p-12 text-center text-sm text-gray-500">
-                                <i className="fa-solid fa-inbox text-3xl text-gray-600 block mb-3"></i>
+                            <div className="p-12 text-center text-sm text-zinc-500">
+                                <i className="fa-solid fa-inbox text-3xl text-zinc-600 block mb-3"></i>
                                 当前筛选下暂无审核单
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead className="bg-gray-50 dark:bg-gray-800">
+                                <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-700">
+                                    <thead className="bg-zinc-50 dark:bg-zinc-800">
                                         <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">单号</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">单号</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">站点 / 页面</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">标题</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">提交人</th>
@@ -226,15 +226,15 @@ export default function StaffPanel() {
                                             const usable = postBots(post.site);
                                             return (
                                                 <React.Fragment key={post.id}>
-                                                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
-                                                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-mono">#{post.id}</td>
+                                                    <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors">
+                                                        <td className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400 font-mono">#{post.id}</td>
                                                         <td className="px-4 py-3">
-                                                            <div className="text-sm text-gray-800 dark:text-gray-200 font-medium">{siteName(post.site)}</div>
-                                                            <div className="text-xs text-gray-500 font-mono">/{post.page}</div>
+                                                            <div className="text-sm text-zinc-800 dark:text-zinc-200 font-medium">{siteName(post.site)}</div>
+                                                            <div className="text-xs text-zinc-500 font-mono">/{post.page}</div>
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 max-w-[180px] truncate">{post.title || '-'}</td>
-                                                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{post.username}</td>
-                                                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{new Date(post.createdAt).toLocaleString()}</td>
+                                                        <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300 max-w-[180px] truncate">{post.title || '-'}</td>
+                                                        <td className="px-4 py-3 text-sm text-zinc-600 dark:text-zinc-300">{post.username}</td>
+                                                        <td className="px-4 py-3 text-xs text-zinc-500 whitespace-nowrap">{new Date(post.createdAt).toLocaleString()}</td>
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-block rounded border px-2 py-0.5 text-xs font-medium ${st.cls}`}>{st.label}</span>
                                                             {post.botLabel && <div className="text-[10px] text-gray-500 mt-1">{post.botLabel}</div>}
@@ -267,7 +267,7 @@ export default function StaffPanel() {
                                                         </td>
                                                     </tr>
                                                     {expanded[post.id] && (
-                                                        <tr className="bg-gray-50 dark:bg-gray-900/40">
+                                                        <tr className="bg-zinc-50 dark:bg-zinc-900/40">
                                                             <td colSpan={7} className="px-4 py-4">
                                                                 <div className="grid gap-3 sm:grid-cols-2 mb-3">
                                                                     <div className="text-xs text-gray-500">
@@ -296,12 +296,12 @@ export default function StaffPanel() {
                                                                     </select>
                                                                 </div>
                                                                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                                    <span className="text-xs font-medium text-gray-500">拒绝备注：</span>
+                                                                    <span className="text-xs font-medium text-zinc-500">拒绝备注：</span>
                                                                     <input value={rejectNote[post.id] || ''} onChange={e => setRejectNote(p => ({ ...p, [post.id]: e.target.value }))}
                                                                         placeholder="选填，拒绝原因（仅拒绝时需要）"
-                                                                        className="bg-gray-900 border border-gray-600 text-white text-sm rounded-lg p-1.5 flex-1 min-w-[220px]" />
+                                                                        className="bg-zinc-900 border border-zinc-700 text-zinc-100 text-sm rounded-lg p-1.5 flex-1 min-w-[220px]" />
                                                                 </div>
-                                                                <div className="rounded-lg border border-gray-700 bg-gray-900 p-3 max-h-72 overflow-auto">
+                                                                <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-3 max-h-72 overflow-auto">
                                                                     <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">页面源码预览</div>
                                                                     <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap leading-relaxed">{post.source}</pre>
                                                                 </div>

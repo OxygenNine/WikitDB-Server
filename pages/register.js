@@ -156,8 +156,8 @@ export default function Register() {
         }
     };
 
-    return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+        return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-900 transition-colors duration-300">
             <Head>
                 <title>注册 - {config.SITE_NAME}</title>
             </Head>
@@ -217,24 +217,24 @@ export default function Register() {
                         <div className="pt-2 border-t border-gray-100 dark:border-gray-800"></div>
 
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 ml-1">电子邮箱</label>
+                            <label className="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">电子邮箱</label>
                             <input 
                                 type="email" 
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
                                 placeholder="用于接收通知的邮箱"
                             />
                         </div>
                         
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 ml-1">邮箱验证码</label>
+                            <label className="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">邮箱验证码</label>
                             <div className="flex gap-3">
                                 <input 
                                     type="text" 
                                     value={code}
                                     onChange={(e) => setCode(e.target.value)}
-                                    className="flex-1 bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                    className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
                                     placeholder="6位验证码"
                                     maxLength="6"
                                 />
@@ -244,7 +244,7 @@ export default function Register() {
                                     disabled={countdown > 0}
                                     className={`px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap shadow-sm ${
                                         countdown > 0 
-                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-200 dark:border-gray-700' 
+                                            ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed border border-zinc-200 dark:border-zinc-700' 
                                             : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50'
                                     }`}
                                 >

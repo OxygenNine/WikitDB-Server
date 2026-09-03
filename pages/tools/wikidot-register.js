@@ -86,8 +86,8 @@ export default function WikidotRegister() {
         <>
             <Head><title>代注册 Wikidot 账号 - {config.SITE_NAME}</title></Head>
             <div className="py-8 max-w-2xl mx-auto">
-                <div className="mb-6 border-b border-gray-700 pb-4 flex items-center gap-4">
-                    <Link href="/tools" className="text-gray-400 hover:text-white transition-colors">
+                <div className="mb-6 border-b border-zinc-700 pb-4 flex items-center gap-4">
+                    <Link href="/tools" className="text-zinc-400 hover:text-white transition-colors">
                         <i className="fa-solid fa-arrow-left"></i> 返回
                     </Link>
                     <h1 className="text-2xl font-bold text-white">代注册 Wikidot 账号</h1>
