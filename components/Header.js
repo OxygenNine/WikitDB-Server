@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import styles from './Header.module.css';
 const config = require('../wikitdb.config.js');
 
@@ -112,7 +113,7 @@ const Header = () => {
                             </button>
                         </div>
                         <div className="h-full flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-                            <a href="/" className="flex shrink-0 items-center gap-2.5">
+                            <Link href="/" className="flex shrink-0 items-center gap-2.5">
                                 <HighDefLogoSVG className="h-10 w-10 drop-shadow-md" />
                                 <span className="font-bold text-zinc-900 dark:text-white text-lg tracking-wide">
                                     <svg viewBox="-2 -2 254.05 92.5" xmlns="http://www.w3.org/2000/svg" className="h-[2.5rem]">
@@ -121,18 +122,18 @@ const Header = () => {
                                         </g>
                                     </svg>
                                 </span>
-                            </a>
+                            </Link>
                             <div className="hidden sm:ml-6 sm:block h-full">
                                 <div className="flex space-x-4 items-center h-full">
                                     {navItems.map((item) => (
-                                        <a
+                                        <Link
                                             key={item.href}
                                             href={item.href}
                                             aria-current={isChosen(item.href) ? 'page' : undefined}
                                             className={`${styles.headerButton} ${isChosen(item.href) ? styles.chosen : ''} relative inline-flex h-full items-center justify-center px-3 py-2 text-sm tracking-[.35rem] font-medium ${item.tone || DEFAULT_TONE} hover:text-zinc-700 dark:hover:text-zinc-100 transition-colors`}
                                         >
                                             {item.label}
-                                        </a>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
@@ -151,8 +152,8 @@ const Header = () => {
                                 </>
                             ) : (
                                 <>
-                                    <a href="/login" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">登录</a>
-                                    <a href="/register" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-indigo-500/20">注册</a>
+                                    <Link href="/login" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">登录</Link>
+                                    <Link href="/register" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-indigo-500/20">注册</Link>
                                 </>
                             )}
                         </div>
@@ -162,27 +163,27 @@ const Header = () => {
                 <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden border-t border-gray-100 dark:border-gray-700`} id="mobile-menu">
                     <div className="space-y-1 px-2 pt-2 pb-3 bg-white dark:bg-gray-900">
                         <div className="grid grid-cols-2 gap-2">
-                            <a href="/pages" className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">
+                            <Link href="/pages" className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">
                                 <i className="fa-solid fa-file"></i> 页面
-                            </a>
+                            </Link>
                             {/* ... 其他链接同理 ... */}
-                            <a href="/authors" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            <Link href="/authors" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
                                 <i className="fa-solid fa-user"></i> 作者
-                            </a>
-                            <a href="/tools" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            </Link>
+                            <Link href="/tools" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
                                 <i className="fa-solid fa-toolbox"></i> 工具
-                            </a>
+                            </Link>
                             {isStaff && (
-                                <a href="/staff-panel" className="rounded-md px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
+                                <Link href="/staff-panel" className="rounded-md px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
                                     <i className="fa-solid fa-user-shield"></i> 职员面板
-                                </a>
+                                </Link>
                             )}
-                            <a href="/forums" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            <Link href="/forums" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
                                 <i className="fa-solid fa-comments"></i> 论坛
-                            </a>
-                            <a href="/about" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            </Link>
+                            <Link href="/about" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
                                 <i className="fa-solid fa-circle-info"></i> 关于
-                            </a>
+                            </Link>
                         </div>
 
                         <div className="mt-4 border-t border-gray-700 pt-4 pb-2">
@@ -198,12 +199,12 @@ const Header = () => {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2">
-                                    <a href="/login" className="text-center rounded-md border border-gray-600 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700">
+                                    <Link href="/login" className="text-center rounded-md border border-gray-600 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700">
                                         登录
-                                    </a>
-                                    <a href="/register" className="text-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                                    </Link>
+                                    <Link href="/register" className="text-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
                                         注册
-                                    </a>
+                                    </Link>
                                 </div>
                             )}
                         </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 const config = require('../wikitdb.config.js');
 
@@ -262,7 +263,7 @@ export default function Register() {
 
                         <div className="mt-6 text-center">
                             <p className="text-gray-500 dark:text-gray-500 text-xs">
-                                已有档案记录？ <a href="/login" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1 tracking-tight">立即接入终端</a>
+                                已有档案记录？ <Link href="/login" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1 tracking-tight">立即接入终端</Link>
                             </p>
                         </div>
                     </form>
