@@ -189,7 +189,7 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                 <div className="max-w-[1600px] mx-auto px-4">
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                         <div>
-                            <Link href="/tools" className="text-sm text-indigo-500 hover:text-indigo-400">&larr; 返回工具箱</Link>
+                            <Link href="/tools" className="text-sm text-accent hover:text-accent-hover">&larr; 返回工具箱</Link>
                             <h1 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">FTML 编辑器</h1>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
                                 FTML {workerVersion || '加载中'} · 浏览器本地渲染 · 隔离预览
@@ -201,7 +201,7 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                                     key={value}
                                     type="button"
                                     onClick={() => setDevice(value)}
-                                    className={`px-3 py-2 rounded-lg text-xs font-semibold ${device === value ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
+                                    className={`px-3 py-2 rounded-lg text-xs font-semibold ${device === value ? 'bg-accent-solid hover:bg-accent-solid-hover text-accent-fg' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
                                 >
                                     {{ desktop: '桌面', tablet: '平板', mobile: '手机' }[value]}
                                 </button>
@@ -209,7 +209,7 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                             <button
                                 type="button"
                                 onClick={renderSource}
-                                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold"
+                                className="px-4 py-2 rounded-lg bg-accent-solid hover:bg-accent-solid-hover text-accent-fg text-sm font-semibold"
                             >
                                 立即渲染
                             </button>
@@ -244,10 +244,10 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                                 onChange={event => setSource(event.target.value)}
                                 spellCheck={false}
                                 maxLength={300000}
-                                className="flex-1 min-h-[580px] resize-none p-5 bg-gray-950 text-gray-100 font-mono text-sm leading-6 outline-none"
+                                className="flex-1 min-h-[580px] resize-none p-5 bg-sunken text-fg font-mono text-sm leading-6 outline-none"
                                 aria-label="FTML 源码"
                             />
-                            <div className="px-4 py-2 text-xs text-gray-500 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                            <div className="px-4 py-2 text-xs text-fg-3 border-t border-gray-200 dark:border-gray-700 flex justify-between">
                                 <span>{status}</span>
                                 <span>{source.length.toLocaleString()} / 300,000</span>
                             </div>
@@ -256,7 +256,7 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                         <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-950 overflow-hidden flex flex-col">
                             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                                 <strong className="text-sm text-gray-800 dark:text-gray-100">安全预览</strong>
-                                <span className="ml-2 text-xs text-gray-500">脚本、表单、弹窗和外部框架已禁用</span>
+                                <span className="ml-2 text-xs text-fg-3">脚本、表单、弹窗和外部框架已禁用</span>
                             </div>
                             <div className="flex-1 overflow-auto p-4 flex justify-center">
                                 <iframe
@@ -281,9 +281,9 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                                     {[...warnings, ...errors.map(formatError)].join('\n') || '无'}
                                 </pre>
                             </section>
-                            <section className="p-4 rounded-xl border border-indigo-300/50 bg-indigo-50 dark:bg-indigo-950/20">
-                                <h2 className="font-semibold text-indigo-800 dark:text-indigo-300">已展开页面</h2>
-                                <p className="mt-2 text-xs text-indigo-900 dark:text-indigo-200">
+                            <section className="p-4 rounded-xl border border-accent-line bg-accent-soft">
+                                <h2 className="font-semibold text-accent">已展开页面</h2>
+                                <p className="mt-2 text-xs text-accent">
                                     {includedPages.join('、') || '未展开 Include'}
                                 </p>
                             </section>

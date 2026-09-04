@@ -164,7 +164,7 @@ export default function Register() {
             </Head>
 
             <div className="w-full max-w-md bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 shadow-xl dark:shadow-2xl relative overflow-hidden transition-all duration-300">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent-soft rounded-full blur-3xl pointer-events-none"></div>
 
                 <div className="text-center mb-8 relative z-10">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">加入 {config.SITE_NAME}</h1>
@@ -190,7 +190,7 @@ export default function Register() {
                                 type="text" 
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="推荐使用您的常用代号"
                             />
                         </div>
@@ -200,7 +200,7 @@ export default function Register() {
                                 type="password" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="输入强密码"
                             />
                         </div>
@@ -210,7 +210,7 @@ export default function Register() {
                                 type="password" 
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="再次输入密码"
                             />
                         </div>
@@ -223,7 +223,7 @@ export default function Register() {
                                 type="email" 
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="用于接收通知的邮箱"
                             />
                         </div>
@@ -235,7 +235,7 @@ export default function Register() {
                                     type="text" 
                                     value={code}
                                     onChange={(e) => setCode(e.target.value)}
-                                    className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                    className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-zinc-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                     placeholder="6位验证码"
                                     maxLength="6"
                                 />
@@ -246,7 +246,7 @@ export default function Register() {
                                     className={`px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap shadow-sm ${
                                         countdown > 0 
                                             ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed border border-zinc-200 dark:border-zinc-700' 
-                                            : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50'
+                                            : 'bg-accent-soft text-accent border border-accent-line hover:text-accent-hover'
                                     }`}
                                 >
                                     {countdown > 0 ? `${countdown}s` : '获取代码'}
@@ -256,14 +256,14 @@ export default function Register() {
 
                         <button 
                             type="submit"
-                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-500/20 transition-all uppercase tracking-[0.2em] text-sm mt-4 flex items-center justify-center gap-2"
+                            className="w-full bg-accent-solid hover:bg-accent-solid-hover text-accent-fg font-black py-4 rounded-xl shadow-lg shadow-violet-500/20 transition-all uppercase tracking-[0.2em] text-sm mt-4 flex items-center justify-center gap-2"
                         >
                             下一步：绑定 Wikidot 身份 <i className="fa-solid fa-chevron-right text-xs"></i>
                         </button>
 
                         <div className="mt-6 text-center">
                             <p className="text-gray-500 dark:text-gray-500 text-xs">
-                                已有档案记录？ <Link href="/login" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1 tracking-tight">立即接入终端</Link>
+                                已有档案记录？ <Link href="/login" className="text-accent font-bold hover:underline ml-1 tracking-tight">立即接入终端</Link>
                             </p>
                         </div>
                     </form>
@@ -271,13 +271,13 @@ export default function Register() {
 
                 {step === 2 && (
                     <div className="space-y-6 relative z-10">
-                        <div className="bg-indigo-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-indigo-100 dark:border-gray-800 shadow-inner">
-                            <h3 className="text-indigo-900 dark:text-white font-bold mb-3 text-sm flex items-center gap-2">
+                        <div className="bg-accent-soft p-5 rounded-2xl border border-accent-line shadow-inner">
+                            <h3 className="text-accent dark:text-white font-bold mb-3 text-sm flex items-center gap-2">
                                 <i className="fa-solid fa-circle-info"></i> Wikidot 身份绑定指引：
                             </h3>
-                            <ol className="text-indigo-800/70 dark:text-gray-400 text-xs list-decimal list-inside space-y-2.5 leading-relaxed font-medium">
+                            <ol className="text-accent dark:text-gray-400 text-xs list-decimal list-inside space-y-2.5 leading-relaxed font-medium">
                                 <li>复制下方的专属验证码。</li>
-                                <li>前往验证页：<a href="https://wikkit.wikidot.com/wikitdb:verify" target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-blue-400 font-bold hover:underline">wikitdb:verify</a></li>
+                                <li>前往验证页：<a href="https://wikkit.wikidot.com/wikitdb:verify" target="_blank" rel="noopener noreferrer" className="text-accent font-bold hover:underline">wikitdb:verify</a></li>
                                 <li>点击页面底部的 <strong>Edit (编辑)</strong>。</li>
                                 <li>在正文添加空格，并在 <strong>Short description</strong> 框粘贴。</li>
                                 <li>点击 <strong>Save (保存)</strong>，然后回到这里。</li>
@@ -286,7 +286,7 @@ export default function Register() {
 
                         <div className="text-center bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-gray-800 py-5 rounded-2xl shadow-inner group">
                             <div className="text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em] mb-2">专属身份验证代码</div>
-                            <div className="text-3xl font-mono font-black text-indigo-600 dark:text-yellow-400 select-all tracking-wider group-hover:scale-105 transition-transform">
+                            <div className="text-3xl font-mono font-black text-accent dark:text-yellow-400 select-all tracking-wider group-hover:scale-105 transition-transform">
                                 {verifyCode}
                             </div>
                         </div>
@@ -320,7 +320,7 @@ export default function Register() {
                             
                             <div className="bg-white dark:bg-gray-950 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                                 <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-2">绑定的 Wikidot 身份</span>
-                                <span className="text-2xl font-black text-indigo-600 dark:text-blue-400 tracking-tight">{boundWdid}</span>
+                                <span className="text-2xl font-black text-accent tracking-tight">{boundWdid}</span>
                             </div>
                         </div>
 
@@ -334,7 +334,7 @@ export default function Register() {
                             <button 
                                 onClick={handleFinalSubmit}
                                 disabled={isVerifying}
-                                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-indigo-500/20 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
+                                className="flex-1 bg-accent-solid hover:bg-accent-solid-hover text-accent-fg font-black py-4 rounded-xl transition-all shadow-xl shadow-violet-500/20 text-xs uppercase tracking-[0.2em] disabled:opacity-50"
                             >
                                 {isVerifying ? '正在建立档案...' : '确认绑定并注册'}
                             </button>

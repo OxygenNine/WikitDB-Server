@@ -43,7 +43,7 @@
  * 明暗由 Header 的切换按钮控制（_document.js 内联脚本在首屏前应用 localStorage 偏好）。
  */
 :global(html:not(.dark)) .headerButton::before {
-    background-image: linear-gradient(0deg, rgb(167 139 250 / 0.4) 0%, transparent 75%);
+    background-image: linear-gradient(0deg, rgb(167 139 250 / 0.25) 0%, transparent 50%);
     border-bottom-color: rgb(124 58 237);
 }
 

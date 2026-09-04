@@ -4,14 +4,23 @@ import Link from 'next/link';
 import styles from './Header.module.css';
 const config = require('../wikitdb.config.js');
 
-// 高清矢量 Logo 组件
+// 高清矢量 Logo 组件：亮/暗主题各渲染一份，靠 dark: 变体切换显隐（无闪烁、无需 JS）
 const HighDefLogoSVG = ({ className }) => (
-    <img 
-        src="/img/wikit-logo-white.svg" 
-        alt="Logo" 
-        className={className}
-        onError={(e) => { e.target.src = '/img/logo.svg'; }} // 降级处理
-    />
+    <>
+        <img
+            src="/img/wikit-logo-black.svg"
+            alt="Logo"
+            className={`${className} dark:hidden`}
+            onError={(e) => { e.target.src = '/img/logo.svg'; }} // 降级处理
+        />
+        <img
+            src="/img/wikit-logo-white.svg"
+            alt=""
+            aria-hidden="true"
+            className={`${className} hidden dark:block`}
+            onError={(e) => { e.target.src = '/img/logo.svg'; }} // 降级处理
+        />
+    </>
 );
 
 // 顶栏导航项。子路由（如 /tools/gacha）同样高亮父级入口。
@@ -188,7 +197,7 @@ const Header = () => {
                             ) : (
                                 <>
                                     <Link href="/login" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">登录</Link>
-                                    <Link href="/register" className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-all shadow-md hover:shadow-indigo-500/20">注册</Link>
+                                    <Link href="/register" className="rounded-md bg-accent-solid px-3 py-2 text-sm font-medium text-accent-fg hover:bg-accent-solid-hover transition-all shadow-md hover:shadow-violet-500/20">注册</Link>
                                 </>
                             )}
                         </div>
@@ -202,42 +211,42 @@ const Header = () => {
                                 <i className="fa-solid fa-file"></i> 页面
                             </Link>
                             {/* ... 其他链接同理 ... */}
-                            <Link href="/authors" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            <Link href="/authors" className="rounded-md px-3 py-2 text-sm font-medium text-fg-2 hover:bg-sunken hover:text-fg">
                                 <i className="fa-solid fa-user"></i> 作者
                             </Link>
-                            <Link href="/tools" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            <Link href="/tools" className="rounded-md px-3 py-2 text-sm font-medium text-fg-2 hover:bg-sunken hover:text-fg">
                                 <i className="fa-solid fa-toolbox"></i> 工具
                             </Link>
                             {isStaff && (
-                                <Link href="/staff-panel" className="rounded-md px-3 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300">
+                                <Link href="/staff-panel" className="rounded-md px-3 py-2 text-sm font-medium text-accent hover:text-accent-hover">
                                     <i className="fa-solid fa-user-shield"></i> 职员面板
                                 </Link>
                             )}
-                            <Link href="/forums" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            <Link href="/forums" className="rounded-md px-3 py-2 text-sm font-medium text-fg-2 hover:bg-sunken hover:text-fg">
                                 <i className="fa-solid fa-comments"></i> 论坛
                             </Link>
-                            <Link href="/about" className="rounded-md px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/5 hover:text-white">
+                            <Link href="/about" className="rounded-md px-3 py-2 text-sm font-medium text-fg-2 hover:bg-sunken hover:text-fg">
                                 <i className="fa-solid fa-circle-info"></i> 关于
                             </Link>
                         </div>
 
-                        <div className="mt-4 border-t border-gray-700 pt-4 pb-2">
+                        <div className="mt-4 border-t border-line pt-4 pb-2">
                             {username ? (
                                 <div className="flex items-center justify-between px-3">
-                                    <span className="text-sm font-medium text-gray-300">当前用户：{username}</span>
+                                    <span className="text-sm font-medium text-fg-3">当前用户：{username}</span>
                                     <button
                                         onClick={handleLogout}
-                                        className="rounded-md bg-gray-700 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-600 transition-colors"
+                                        className="rounded-md bg-accent-solid px-3 py-2 text-sm font-medium text-accent-fg hover:bg-accent-solid-hover transition-colors"
                                     >
                                         退出
                                     </button>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 gap-2">
-                                    <Link href="/login" className="text-center rounded-md border border-gray-600 px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-700">
+                                    <Link href="/login" className="text-center rounded-md border border-line-strong px-3 py-2 text-sm font-medium text-fg-3 hover:bg-sunken">
                                         登录
                                     </Link>
-                                    <Link href="/register" className="text-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">
+                                    <Link href="/register" className="text-center rounded-md bg-accent-solid px-3 py-2 text-sm font-medium text-accent-fg hover:bg-accent-solid-hover">
                                         注册
                                     </Link>
                                 </div>
