@@ -39,9 +39,8 @@
 }
 
 /*
- * 亮色底预留：violet-300 在 zinc-100 上几乎不可见，换成更深的 violet-400 / violet-600。
- * 注意：_document.js 目前把 html className="dark" 写死了，
- * 在支持亮色切换之前这一块不会生效。
+ * 亮色底适配：violet-300 在 zinc-100 上几乎不可见，换成更深的 violet-400 / violet-600。
+ * 明暗由 Header 的切换按钮控制（_document.js 内联脚本在首屏前应用 localStorage 偏好）。
  */
 :global(html:not(.dark)) .headerButton::before {
     background-image: linear-gradient(0deg, rgb(167 139 250 / 0.4) 0%, transparent 75%);

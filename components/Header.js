@@ -34,6 +34,8 @@ const Header = () => {
     const [username, setUsername] = useState(null);
     const [isStaff, setIsStaff] = useState(false);
     const [broadcastMsg, setBroadcastMsg] = useState('');
+    // null = 尚未挂载（服务端/首帧），挂载后以 <html> 实际类名为准
+    const [theme, setTheme] = useState(null);
 
     const isChosen = (href) =>
         router.pathname === href || router.pathname.startsWith(href + '/');
@@ -41,6 +43,18 @@ const Header = () => {
     const navItems = isStaff
         ? [...NAV_ITEMS, STAFF_ITEM, ...NAV_ITEMS_TAIL]
         : [...NAV_ITEMS, ...NAV_ITEMS_TAIL];
+
+    // _document.js 的内联脚本已在首屏前应用主题，这里直接读取实际状态
+    useEffect(() => {
+        setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    }, []);
+
+    const toggleTheme = () => {
+        const next = theme === 'dark' ? 'light' : 'dark';
+        setTheme(next);
+        localStorage.setItem('theme', next);
+        document.documentElement.classList.toggle('dark', next === 'dark');
+    };
 
     useEffect(() => {
         const storedUsername = localStorage.getItem('username');
@@ -139,7 +153,28 @@ const Header = () => {
                             </div>
                         </div>
 
+                        {/* 移动端主题切换（顶栏右端） */}
+                        <div className="flex items-center sm:hidden">
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                aria-label="切换明暗主题"
+                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
+                            </button>
+                        </div>
+
                         <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                aria-label="切换明暗主题"
+                                title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
+                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            >
+                                {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
+                            </button>
                             {username ? (
                                 <>
                                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{username}</span>
