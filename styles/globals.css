@@ -99,3 +99,15 @@ html.dark {
     color-scheme: dark;
     background-color: var(--w-canvas);
 }
+
+/*
+ * 正文字体栈：中文交给各平台系统字体（零加载、无 FOIT），
+ * 展示字体 Anton / Archivo 由组件通过 font-[family-name:...] 按需引用。
+ */
+body {
+    font-family:
+        ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial,
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+        "Noto Sans SC", sans-serif;
+}

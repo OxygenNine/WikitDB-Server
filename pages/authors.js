@@ -248,8 +248,8 @@ const AuthorProfile = () => {
                         </div>
                     )}
 
-                    {/* 加载骨架 */}
-                    {loading && (
+                    {/* 加载骨架（仅作者档案模式；排行榜模式的骨架放在下方站点按钮之后） */}
+                    {name && loading && (
                         <div className="animate-pulse space-y-4" aria-hidden="true">
                             <div className="h-24 rounded-lg border border-line bg-panel"></div>
                             <div className="h-72 rounded-lg border border-line bg-panel"></div>
@@ -543,6 +543,14 @@ const AuthorProfile = () => {
                                     );
                                 })}
                             </div>
+
+                            {/* 排行加载骨架：位于站点按钮组下方，占据原吸顶工具栏 + 排行表格的位置 */}
+                            {loading && (
+                                <div className="animate-pulse space-y-4" aria-hidden="true">
+                                    <div className="h-11 rounded-lg border border-line bg-panel"></div>
+                                    <div className="h-80 rounded-lg border border-line bg-panel"></div>
+                                </div>
+                            )}
 
                             {/* 吸顶工具栏：匹配信息 + 计数 + 分页 */}
                             {!loading && displayedRankingList.length > 0 && (

@@ -398,7 +398,6 @@ const StaffPostDeletion = () => {
                         <i className="fa-solid fa-arrow-left"></i> 返回
                     </Link>
                     <h1 className="text-2xl font-bold text-fg">删帖公示操作</h1>
-                    <span className="text-xs text-fg-3 bg-sunken px-2 py-1 rounded">staff-post-deletion</span>
                 </div>
 
                 {error && (

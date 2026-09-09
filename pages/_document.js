@@ -24,6 +24,8 @@ export default function Document() {
         <link rel="icon" href="/img/logo.svg" type="image/svg+xml" />
         <link rel="alternate icon" href="/img/logo.png" type="image/png" />
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" rel="stylesheet"></link>
+        {/* 展示字体 Anton / Archivo 已改为 @fontsource 自托管（见 _app.js）；
+            中文正文交由系统字体栈（见 styles/globals.css），不再依赖 Google Fonts */}
       </Head>
       <body>
         <Main />

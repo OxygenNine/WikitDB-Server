@@ -168,7 +168,7 @@ const Header = () => {
                                 type="button"
                                 onClick={toggleTheme}
                                 aria-label="切换明暗主题"
-                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                             >
                                 {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
                             </button>
@@ -180,7 +180,7 @@ const Header = () => {
                                 onClick={toggleTheme}
                                 aria-label="切换明暗主题"
                                 title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
-                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                             >
                                 {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
                             </button>
