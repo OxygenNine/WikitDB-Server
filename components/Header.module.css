@@ -52,3 +52,12 @@
         transition: none;
     }
 }
+
+@media screen and (max-width: 1000px) {
+    .headerButton {
+        text-indent: 0;
+        letter-spacing: 0;
+        padding: 0 0.5rem;
+        margin: 0 !important;
+    }
+}

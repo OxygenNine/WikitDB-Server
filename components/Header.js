@@ -34,7 +34,7 @@ const NAV_ITEMS_TAIL = [
     { href: '/forums', label: '论坛' },
     { href: '/about', label: '关于' },
 ];
-const STAFF_ITEM = { href: '/staff-panel', label: '职员面板', tone: 'text-emerald-600 dark:text-emerald-500' };
+const STAFF_ITEM = { href: '/staff-panel', label: '职员面板', tone: 'text-primary-600 dark:text-primary-500' };
 const DEFAULT_TONE = 'text-zinc-600 dark:text-zinc-300';
 
 const Header = () => {
@@ -168,7 +168,7 @@ const Header = () => {
                                 type="button"
                                 onClick={toggleTheme}
                                 aria-label="切换明暗主题"
-                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
                             >
                                 {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
                             </button>
@@ -189,7 +189,7 @@ const Header = () => {
                                     <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{username}</span>
                                     <button
                                         onClick={handleLogout}
-                                        className="rounded-md bg-gray-200 dark:bg-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                                        className="rounded-md bg-sunken dark:bg-panel px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-panel dark:hover:bg-raised transition-colors"
                                     >
                                         退出
                                     </button>
@@ -205,7 +205,7 @@ const Header = () => {
                 </div>
 
                 <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden border-t border-gray-100 dark:border-gray-700`} id="mobile-menu">
-                    <div className="space-y-1 px-2 pt-2 pb-3 bg-white dark:bg-gray-900">
+                    <div className="space-y-1 px-2 pt-2 pb-3 bg-white dark:bg-canvas">
                         <div className="grid grid-cols-2 gap-2">
                             <Link href="/pages" className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">
                                 <i className="fa-solid fa-file"></i> 页面
@@ -236,7 +236,7 @@ const Header = () => {
                                     <span className="text-sm font-medium text-fg-3">当前用户：{username}</span>
                                     <button
                                         onClick={handleLogout}
-                                        className="rounded-md bg-accent-solid px-3 py-2 text-sm font-medium text-accent-fg hover:bg-accent-solid-hover transition-colors"
+                                        className="rounded-md bg-panel px-3 py-2 text-sm font-medium text-accent-fg hover:bg-accent-solid-hover transition-colors"
                                     >
                                         退出
                                     </button>

@@ -7,7 +7,7 @@ const Layout = ({ children }) => {
     return (
         <div className="min-h-screen flex flex-col bg-canvas text-fg transition-colors duration-300">
             <Header />
-            <main className="flex-grow mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 w-full">
+            <main className="flex-grow mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-8 w-full">
                 {children}
             </main>
             <Footer />
