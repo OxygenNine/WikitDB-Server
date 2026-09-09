@@ -158,7 +158,7 @@ export default function Register() {
     };
 
         return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-900 transition-colors duration-300">
+        <div className="min-h-screen flex items-center justify-center p-4 transition-colors duration-300">
             <Head>
                 <title>注册 - {config.SITE_NAME}</title>
             </Head>
