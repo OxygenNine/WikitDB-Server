@@ -120,7 +120,7 @@ const Header = () => {
                             <button
                                 type="button"
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="relative inline-flex items-center justify-center rounded-md p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="relative inline-flex items-center justify-center rounded-md p-2 text-fg-2 hover:bg-sunken hover:text-fg transition-colors"
                             >
                                 <span className="absolute -inset-0.5"></span>
                                 <span className="sr-only">打开顶栏</span>
@@ -168,7 +168,7 @@ const Header = () => {
                                 type="button"
                                 onClick={toggleTheme}
                                 aria-label="切换明暗主题"
-                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="rounded-md p-2 w-9 text-fg-2 hover:text-fg transition-colors"
                             >
                                 {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
                             </button>
@@ -180,23 +180,23 @@ const Header = () => {
                                 onClick={toggleTheme}
                                 aria-label="切换明暗主题"
                                 title={theme === 'dark' ? '切换到亮色模式' : '切换到暗色模式'}
-                                className="rounded-md p-2 w-9 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                                className="rounded-md p-2 w-9 text-fg-2 hover:text-fg transition-colors"
                             >
                                 {theme && <i className={`fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'} text-lg`}></i>}
                             </button>
                             {username ? (
                                 <>
-                                    <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{username}</span>
+                                    <span className="text-sm font-medium text-fg-2">{username}</span>
                                     <button
                                         onClick={handleLogout}
-                                        className="rounded-md bg-sunken dark:bg-panel px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-panel dark:hover:bg-raised transition-colors"
+                                        className="rounded-md bg-sunken dark:bg-panel px-3 py-2 text-sm font-medium text-fg-2 hover:bg-panel dark:hover:bg-raised transition-colors"
                                     >
                                         退出
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    <Link href="/login" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">登录</Link>
+                                    <Link href="/login" className="text-sm font-medium text-fg-2 hover:text-fg transition-colors">登录</Link>
                                     <Link href="/register" className="rounded-md bg-accent-solid px-3 py-2 text-sm font-medium text-accent-fg hover:bg-accent-solid-hover transition-all shadow-md hover:shadow-violet-500/20">注册</Link>
                                 </>
                             )}
@@ -204,10 +204,10 @@ const Header = () => {
                     </div>
                 </div>
 
-                <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden border-t border-gray-100 dark:border-gray-700`} id="mobile-menu">
+                <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} sm:hidden border-t border-line`} id="mobile-menu">
                     <div className="space-y-1 px-2 pt-2 pb-3 bg-white dark:bg-canvas">
                         <div className="grid grid-cols-2 gap-2">
-                            <Link href="/pages" className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white">
+                            <Link href="/pages" className="rounded-md px-3 py-2 text-sm font-medium text-fg-2 hover:bg-sunken hover:text-fg">
                                 <i className="fa-solid fa-file"></i> 页面
                             </Link>
                             {/* ... 其他链接同理 ... */}

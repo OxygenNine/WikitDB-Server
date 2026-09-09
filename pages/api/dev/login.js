@@ -2,13 +2,19 @@ import prisma from '../../../lib/prisma';
 import { signToken, serializeAuthCookie } from '../../../utils/auth';
 
 /**
- * 开发环境身份切换（生产环境返回 404，避免成为后门）
+ * 开发环境身份切换
  *
  *   /api/dev/login?as=staff            以职员身份登录并跳转首页
  *   /api/dev/login?as=admin&next=/admin 以管理员身份登录并跳转 /admin
  *   /api/dev/login?as=logout           清除登录态
  *
  * 依赖 scripts/dev-seed.js 先造好账号。
+ *
+ * 安全：这是能直接签发任意角色 JWT 的后门接口，设了两道独立的闸，任一不满足即 404：
+ *   1. NODE_ENV 必须是非 production（Next 构建/启动时的默认闸）
+ *   2. 必须显式设置 ENABLE_DEV_LOGIN=1（自托管 docker、preview 环境常漏设 NODE_ENV，
+ *      单靠第一道闸会在这些场景下把后门暴露出去）
+ * 也就是说，即便部署时忘了设 NODE_ENV，只要没显式打开 ENABLE_DEV_LOGIN，接口就不可用。
  */
 
 const ROLES = {
@@ -17,8 +23,12 @@ const ROLES = {
     admin: 'dev_admin',
 };
 
+// 模块加载时求值：生产构建下该分支整体不可达，打包器可据此消除
+const DEV_LOGIN_ENABLED =
+    process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEV_LOGIN === '1';
+
 export default async function handler(req, res) {
-    if (process.env.NODE_ENV === 'production') {
+    if (!DEV_LOGIN_ENABLED) {
         return res.status(404).json({ error: 'Not found' });
     }
 

@@ -61,7 +61,7 @@ const features = [
         desc: '各分站的页面数据实时同步过来，想按标签搜、按评分排、按时间筛都行。',
         cta: '去检索',
         href: '/pages',
-        img: '/img/index/showcase-1.png'
+        img: '/img/index/showcase-1.webp'
     },
     {
         id: 'f02',
@@ -70,7 +70,7 @@ const features = [
         desc: '看某个作者写了什么、评分走势怎么样、在哪些站活跃，一目了然。',
         cta: '查作者',
         href: '/authors',
-        img: '/img/index/showcase-2.png'
+        img: '/img/index/showcase-2.webp'
     },
     {
         id: 'f03',
@@ -79,7 +79,7 @@ const features = [
         desc: '盲盒抽取、删除公告生成、质量评审……一些能省事的自动化小玩意。',
         cta: '看工具',
         href: '/tools',
-        img: '/img/index/showcase-3.png'
+        img: '/img/index/showcase-3.webp'
     }
 ];
 

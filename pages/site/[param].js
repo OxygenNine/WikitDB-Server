@@ -105,7 +105,7 @@ const SiteDashboard = ({ siteConfig, recentPages, totalPages, topAuthors }) => {
                                     <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-raised transition-colors">
                                         <span className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-medium shrink-0 ${
                                             i === 0 ? 'bg-yellow-500/15 text-amber-600 dark:text-amber-400' :
-                                            i === 1 ? 'bg-gray-500/15 text-fg-2' :
+                                            i === 1 ? 'bg-zinc-500/15 text-fg-2' :
                                             i === 2 ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' :
                                             'text-fg-3'
                                         }`}>

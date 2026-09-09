@@ -101,7 +101,7 @@ export default function SavePage() {
                         提交后进入<strong>职员审核队列</strong>，审核通过后由职员登记的机器人代发，无需填写 Token 或账号密码。
                     </div>
                     <button onClick={handleSubmit} disabled={loading}
-                        className="w-full px-5 py-2.5 bg-accent-solid hover:bg-accent-solid-hover disabled:bg-gray-700 text-accent-fg text-sm font-bold rounded-lg transition-colors">
+                        className="w-full px-5 py-2.5 bg-accent-solid hover:bg-accent-solid-hover disabled:bg-line-strong text-accent-fg text-sm font-bold rounded-lg transition-colors">
                         {loading ? '提交中...' : '提交审核'}
                     </button>
                 </div>

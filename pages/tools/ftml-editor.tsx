@@ -190,8 +190,8 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                         <div>
                             <Link href="/tools" className="text-sm text-accent hover:text-accent-hover">&larr; 返回工具箱</Link>
-                            <h1 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">FTML 编辑器</h1>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                            <h1 className="mt-2 text-2xl font-bold text-fg">FTML 编辑器</h1>
+                            <p className="text-sm text-fg-2">
                                 FTML {workerVersion || '加载中'} · 浏览器本地渲染 · 隔离预览
                             </p>
                         </div>
@@ -201,7 +201,7 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                                     key={value}
                                     type="button"
                                     onClick={() => setDevice(value)}
-                                    className={`px-3 py-2 rounded-lg text-xs font-semibold ${device === value ? 'bg-accent-solid hover:bg-accent-solid-hover text-accent-fg' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'}`}
+                                    className={`px-3 py-2 rounded-lg text-xs font-semibold ${device === value ? 'bg-accent-solid hover:bg-accent-solid-hover text-accent-fg' : 'bg-raised text-fg-2'}`}
                                 >
                                     {{ desktop: '桌面', tablet: '平板', mobile: '手机' }[value]}
                                 </button>
@@ -217,11 +217,11 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                     </div>
 
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-[680px]">
-                        <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden flex flex-col">
-                            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
-                                <strong className="text-sm text-gray-800 dark:text-gray-100">Wikidot 源码</strong>
+                        <section className="rounded-2xl border border-line bg-panel overflow-hidden flex flex-col">
+                            <div className="px-4 py-3 border-b border-line flex flex-wrap items-center justify-between gap-3">
+                                <strong className="text-sm text-fg">Wikidot 源码</strong>
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                                    <label className="flex items-center gap-2 text-xs text-fg-2">
                                         <input
                                             type="checkbox"
                                             checked={expandIncludes}
@@ -233,7 +233,7 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                                         value={site}
                                         onChange={event => setSite(event.target.value)}
                                         disabled={!expandIncludes}
-                                        className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs"
+                                        className="px-2 py-1.5 rounded-lg border border-line-strong bg-raised text-xs"
                                     >
                                         {sites.map(item => <option key={item.param} value={item.param}>{item.name}</option>)}
                                     </select>
@@ -247,15 +247,15 @@ export default function FtmlEditor({ sites }: FtmlEditorProps) {
                                 className="flex-1 min-h-[580px] resize-none p-5 bg-sunken text-fg font-mono text-sm leading-6 outline-none"
                                 aria-label="FTML 源码"
                             />
-                            <div className="px-4 py-2 text-xs text-fg-3 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                            <div className="px-4 py-2 text-xs text-fg-3 border-t border-line flex justify-between">
                                 <span>{status}</span>
                                 <span>{source.length.toLocaleString()} / 300,000</span>
                             </div>
                         </section>
 
-                        <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-950 overflow-hidden flex flex-col">
-                            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-                                <strong className="text-sm text-gray-800 dark:text-gray-100">安全预览</strong>
+                        <section className="rounded-2xl border border-line bg-sunken overflow-hidden flex flex-col">
+                            <div className="px-4 py-3 border-b border-line bg-panel">
+                                <strong className="text-sm text-fg">安全预览</strong>
                                 <span className="ml-2 text-xs text-fg-3">脚本、表单、弹窗和外部框架已禁用</span>
                             </div>
                             <div className="flex-1 overflow-auto p-4 flex justify-center">

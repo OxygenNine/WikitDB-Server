@@ -73,7 +73,7 @@ const About = ({ contentHtml }) => {
                             <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
                                 <Link
                                     href="/pages"
-                                    className="inline-flex items-center px-7 py-3 bg-white text-violet-600 font-semibold rounded-xl hover:bg-gray-100 transition-all hover:-translate-y-0.5 shadow-lg"
+                                    className="inline-flex items-center px-7 py-3 bg-white text-violet-600 font-semibold rounded-xl hover:bg-zinc-200 transition-all hover:-translate-y-0.5 shadow-lg"
                                 >
                                     <i aria-hidden="true" className="fa-solid fa-magnifying-glass mr-2 text-sm"></i>
                                     开始检索

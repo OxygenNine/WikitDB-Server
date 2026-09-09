@@ -13,13 +13,29 @@
  *
  * 同时造若干 proxy_posts 审核单，覆盖全部状态，供职员面板 UI 调试。
  * 重复执行是幂等的（upsert + 按 username/page 去重）。
+ *
+ * 安全：本脚本会直接写库且口令固定，因此生产环境（NODE_ENV=production）
+ * 一律拒绝执行；口令优先取 DEV_SEED_PASSWORD，未设置时才回退到默认值。
  */
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
+// 生产环境硬闸：误连生产库执行会写入带已知口令的账号
+if (process.env.NODE_ENV === 'production') {
+    console.error('[dev-seed] 拒绝执行：NODE_ENV=production。本脚本仅供本地开发使用。');
+    process.exit(1);
+}
+
+// 第二道闸：DATABASE_URL 指向非本地库时拒绝，避免误对线上库写种子账号
+const dbUrl = process.env.DATABASE_URL || '';
+if (dbUrl && !/(localhost|127\.0\.0\.1|\[?::1\]?)/.test(dbUrl) && process.env.DEV_SEED_ALLOW_REMOTE !== '1') {
+    console.error('[dev-seed] 拒绝执行：DATABASE_URL 不是本地库。确认目标无误请设置 DEV_SEED_ALLOW_REMOTE=1 后重试。');
+    process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
-const PASSWORD = 'wikitdb-dev-2026';
+const PASSWORD = process.env.DEV_SEED_PASSWORD || 'wikitdb-dev-2026';
 
 const ACCOUNTS = [
     { username: 'dev_user', isStaff: false, isAdmin: false, staffSites: null },

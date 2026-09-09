@@ -163,12 +163,12 @@ export default function Register() {
                 <title>注册 - {config.SITE_NAME}</title>
             </Head>
 
-            <div className="w-full max-w-md bg-white dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-2xl p-8 shadow-xl dark:shadow-2xl relative overflow-hidden transition-all duration-300">
+            <div className="w-full max-w-md bg-panel border border-line rounded-2xl p-8 shadow-xl dark:shadow-2xl relative overflow-hidden transition-all duration-300">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-accent-soft rounded-full blur-3xl pointer-events-none"></div>
 
                 <div className="text-center mb-8 relative z-10">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">加入 {config.SITE_NAME}</h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm font-medium tracking-tight uppercase tracking-widest opacity-80">初始化你的数字档案身份</p>
+                    <h1 className="text-3xl font-bold text-fg mb-2">加入 {config.SITE_NAME}</h1>
+                    <p className="text-fg-2 text-sm font-medium tracking-tight uppercase tracking-widest opacity-80">初始化你的数字档案身份</p>
                 </div>
 
                 {error && (
@@ -185,37 +185,37 @@ export default function Register() {
                 {step === 1 && (
                     <form onSubmit={handleNextStep} className="space-y-5 relative z-10">
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 ml-1">设定登录用户名</label>
+                            <label className="block text-[10px] font-bold text-fg-2 uppercase tracking-widest mb-1.5 ml-1">设定登录用户名</label>
                             <input 
                                 type="text" 
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
+                                className="w-full bg-sunken border border-line rounded-xl px-4 py-3 text-fg focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="推荐使用您的常用代号"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 ml-1">设定密码</label>
+                            <label className="block text-[10px] font-bold text-fg-2 uppercase tracking-widest mb-1.5 ml-1">设定密码</label>
                             <input 
                                 type="password" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
+                                className="w-full bg-sunken border border-line rounded-xl px-4 py-3 text-fg focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="输入强密码"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1.5 ml-1">确认密码</label>
+                            <label className="block text-[10px] font-bold text-fg-2 uppercase tracking-widest mb-1.5 ml-1">确认密码</label>
                             <input 
                                 type="password" 
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-xl px-4 py-3 text-gray-900 dark:text-white focus:outline-none focus:border-accent-line transition-all shadow-inner"
+                                className="w-full bg-sunken border border-line rounded-xl px-4 py-3 text-fg focus:outline-none focus:border-accent-line transition-all shadow-inner"
                                 placeholder="再次输入密码"
                             />
                         </div>
                         
-                        <div className="pt-2 border-t border-gray-100 dark:border-gray-800"></div>
+                        <div className="pt-2 border-t border-line"></div>
 
                         <div>
                             <label className="block text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1.5 ml-1">电子邮箱</label>
@@ -262,7 +262,7 @@ export default function Register() {
                         </button>
 
                         <div className="mt-6 text-center">
-                            <p className="text-gray-500 dark:text-gray-500 text-xs">
+                            <p className="text-fg-3 text-xs">
                                 已有档案记录？ <Link href="/login" className="text-accent font-bold hover:underline ml-1 tracking-tight">立即接入终端</Link>
                             </p>
                         </div>
@@ -275,7 +275,7 @@ export default function Register() {
                             <h3 className="text-accent dark:text-white font-bold mb-3 text-sm flex items-center gap-2">
                                 <i className="fa-solid fa-circle-info"></i> Wikidot 身份绑定指引：
                             </h3>
-                            <ol className="text-accent dark:text-gray-400 text-xs list-decimal list-inside space-y-2.5 leading-relaxed font-medium">
+                            <ol className="text-accent dark:text-fg-3 text-xs list-decimal list-inside space-y-2.5 leading-relaxed font-medium">
                                 <li>复制下方的专属验证码。</li>
                                 <li>前往验证页：<a href="https://wikkit.wikidot.com/wikitdb:verify" target="_blank" rel="noopener noreferrer" className="text-accent font-bold hover:underline">wikitdb:verify</a></li>
                                 <li>点击页面底部的 <strong>Edit (编辑)</strong>。</li>
@@ -284,8 +284,8 @@ export default function Register() {
                             </ol>
                         </div>
 
-                        <div className="text-center bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-gray-800 py-5 rounded-2xl shadow-inner group">
-                            <div className="text-[10px] text-gray-500 uppercase font-bold tracking-[0.2em] mb-2">专属身份验证代码</div>
+                        <div className="text-center bg-sunken border border-line py-5 rounded-2xl shadow-inner group">
+                            <div className="text-[10px] text-fg-3 uppercase font-bold tracking-[0.2em] mb-2">专属身份验证代码</div>
                             <div className="text-3xl font-mono font-black text-accent dark:text-yellow-400 select-all tracking-wider group-hover:scale-105 transition-transform">
                                 {verifyCode}
                             </div>
@@ -294,7 +294,7 @@ export default function Register() {
                         <div className="flex gap-3">
                             <button 
                                 onClick={() => setStep(1)}
-                                className="px-5 py-3.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-white font-bold rounded-xl transition-all text-xs uppercase tracking-widest"
+                                className="px-5 py-3.5 bg-raised hover:bg-line-strong text-fg font-bold rounded-xl transition-all text-xs uppercase tracking-widest"
                             >
                                 <i className="fa-solid fa-arrow-left mr-2"></i> 返回修改
                             </button>
@@ -315,11 +315,11 @@ export default function Register() {
                             <div className="text-green-500 text-6xl mb-6 drop-shadow-sm">
                                 <i className="fa-solid fa-circle-check"></i>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">身份识别成功</h3>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 leading-relaxed">我们已在 Wikit 验证记录中确认了您的身份，邮箱验证也已就绪。</p>
+                            <h3 className="text-xl font-bold text-fg mb-2 tracking-tight">身份识别成功</h3>
+                            <p className="text-fg-2 text-sm mb-8 leading-relaxed">我们已在 Wikit 验证记录中确认了您的身份，邮箱验证也已就绪。</p>
                             
-                            <div className="bg-white dark:bg-gray-950 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mb-2">绑定的 Wikidot 身份</span>
+                            <div className="bg-panel p-5 rounded-2xl border border-line shadow-sm">
+                                <span className="text-[10px] text-fg-3 font-bold uppercase tracking-widest block mb-2">绑定的 Wikidot 身份</span>
                                 <span className="text-2xl font-black text-accent tracking-tight">{boundWdid}</span>
                             </div>
                         </div>
@@ -327,7 +327,7 @@ export default function Register() {
                         <div className="flex gap-4">
                             <button 
                                 onClick={() => setStep(2)}
-                                className="px-5 py-3.5 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+                                className="px-5 py-3.5 text-fg-3 hover:text-fg transition-colors text-xs font-bold uppercase tracking-widest"
                             >
                                 账号不对？
                             </button>

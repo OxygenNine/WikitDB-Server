@@ -160,7 +160,7 @@ export default function StaffPanel() {
             <Head><title>职员面板 - {config.SITE_NAME}</title></Head>
             <div className="py-8">
                 <div className="max-w-6xl mx-auto">
-                    <div className="mb-6 border-b border-gray-200 dark:border-gray-700 pb-4 flex items-center justify-between flex-wrap gap-3">
+                    <div className="mb-6 border-b border-line pb-4 flex items-center justify-between flex-wrap gap-3">
                         <div className="flex items-center gap-4">
                             <Link href="/tools" className="text-fg-3 hover:text-fg transition-colors">
                                 <i className="fa-solid fa-arrow-left"></i> 返回
@@ -212,15 +212,15 @@ export default function StaffPanel() {
                                     <thead className="bg-zinc-50 dark:bg-zinc-800">
                                         <tr>
                                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">单号</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">站点 / 页面</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">标题</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">提交人</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">提交时间</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">状态</th>
-                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">操作</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-fg-2">站点 / 页面</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-fg-2">标题</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-fg-2">提交人</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-fg-2">提交时间</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-fg-2">状态</th>
+                                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-fg-2">操作</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    <tbody className="divide-y divide-line">
                                         {posts.map(post => {
                                             const st = STATUS_META[post.status] || STATUS_META.pending;
                                             const usable = postBots(post.site);
@@ -275,7 +275,7 @@ export default function StaffPanel() {
                                                                         {post.reviewNote && <div className="mt-1 text-orange-600 dark:text-orange-400">审核备注：{post.reviewNote}</div>}
                                                                         {post.reviewedBy && <div className="mt-1">审核人：{post.reviewedBy}</div>}
                                                                         {post.sendResult && (
-                                                                            <div className="mt-1 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">发送结果：{post.sendResult}</div>
+                                                                            <div className="mt-1 text-fg-2 whitespace-pre-wrap">发送结果：{post.sendResult}</div>
                                                                         )}
                                                                     </div>
                                                                     {post.status === 'pending' && usable.length === 0 && (

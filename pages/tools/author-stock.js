@@ -214,7 +214,7 @@ export default function AuthorStock() {
                                     value={tradeAmount}
                                     onChange={(e) => setTradeAmount(e.target.value)}
                                     disabled={!username}
-                                    className="w-full bg-sunken border border-line rounded-lg px-4 py-2 text-fg font-mono focus:outline-none focus:border-accent-line transition-colors disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-fg-3 disabled:cursor-not-allowed"
+                                    className="w-full bg-sunken border border-line rounded-lg px-4 py-2 text-fg font-mono focus:outline-none focus:border-accent-line transition-colors disabled:bg-line-strong disabled:text-fg-3 disabled:cursor-not-allowed"
                                 />
                             </div>
                         </div>
@@ -223,14 +223,14 @@ export default function AuthorStock() {
                             <button 
                                 onClick={handleBuy}
                                 disabled={!username}
-                                className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold py-3 rounded-lg transition-colors disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                className="flex-1 bg-green-600 hover:bg-green-500 text-white font-semibold py-3 rounded-lg transition-colors disabled:bg-line-strong disabled:text-fg-3 disabled:cursor-not-allowed"
                             >
                                 买入看涨
                             </button>
                             <button 
                                 onClick={handleSell}
                                 disabled={!username}
-                                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-semibold py-3 rounded-lg transition-colors disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-semibold py-3 rounded-lg transition-colors disabled:bg-line-strong disabled:text-fg-3 disabled:cursor-not-allowed"
                             >
                                 抛售平仓
                             </button>

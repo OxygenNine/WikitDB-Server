@@ -93,7 +93,7 @@ const PageTradeCard = ({ pageData, username, onTradeSuccess }) => {
                         value={margin}
                         onChange={(e) => setMargin(e.target.value)}
                         disabled={!username}
-                        className="w-full bg-sunken border border-line rounded-lg px-3 py-2 text-fg focus:outline-none focus:border-accent-line text-sm font-mono disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-fg-3"
+                        className="w-full bg-sunken border border-line rounded-lg px-3 py-2 text-fg focus:outline-none focus:border-accent-line text-sm font-mono disabled:bg-line-strong disabled:text-fg-3"
                         placeholder="金额"
                     />
                 </div>
@@ -103,8 +103,8 @@ const PageTradeCard = ({ pageData, username, onTradeSuccess }) => {
                 onClick={handleSubmit}
                 disabled={isSubmitting || !username}
                 className={`w-full py-2.5 rounded-lg font-bold text-white text-sm transition-colors ${
-                    !username ? 'bg-gray-700 text-gray-500 cursor-not-allowed' :
-                    isSubmitting ? 'bg-gray-600 cursor-not-allowed' : 
+                    !username ? 'bg-line-strong text-fg-3 cursor-not-allowed' :
+                    isSubmitting ? 'bg-line-strong cursor-not-allowed' : 
                     direction === 'long' ? 'bg-green-600 hover:bg-green-500 shadow-[0_0_15px_rgba(22,163,74,0.3)]' : 
                     'bg-red-600 hover:bg-red-500 shadow-[0_0_15px_rgba(220,38,38,0.3)]'
                 }`}

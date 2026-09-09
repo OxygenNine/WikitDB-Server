@@ -181,7 +181,7 @@ export default function AuthorRadar() {
                                 <button 
                                     onClick={fetchAuthorData}
                                     disabled={isLoading}
-                                    className="bg-accent-solid hover:bg-accent-solid-hover text-accent-fg px-4 py-2 rounded-lg font-semibold transition-colors disabled:bg-gray-600 whitespace-nowrap"
+                                    className="bg-accent-solid hover:bg-accent-solid-hover text-accent-fg px-4 py-2 rounded-lg font-semibold transition-colors disabled:bg-line-strong whitespace-nowrap"
                                 >
                                     {isLoading ? '扫描中' : '执行扫描'}
                                 </button>
